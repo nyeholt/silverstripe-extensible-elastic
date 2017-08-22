@@ -10,7 +10,7 @@
 class ElasticaResultSet {
 
 	/**
-	 * The raw lucene query issued to solr
+	 * The raw lucene query issued to 
 	 * @var String
 	 */
 	protected $query;
@@ -18,7 +18,7 @@ class ElasticaResultSet {
     protected $searchService;
 
 	/**
-	 * The raw result from Solr
+	 * The raw result from elastic
 	 *
 	 * @var String
 	 */
@@ -56,7 +56,7 @@ class ElasticaResultSet {
 	 * Create a new result set object
 	 *
 	 * @param $query
-	 *			The raw lucene query issued to solr
+	 *			The raw lucene query issued 
 	 */
     public function __construct($query, $rawResponse, $parameters, $service) {
 		$this->query = $query;
@@ -185,7 +185,7 @@ class ElasticaResultSet {
 						$totalAdded++;
 					} else {
 						error_log("Object $doc->id is no longer in the system, removing from index");
-						$this->solr->unindex($type, $id);
+						$this->searchService->remove($doc);
 					}
 				}
 				$this->totalResults = $documents->numFound;

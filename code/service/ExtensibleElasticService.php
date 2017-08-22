@@ -1,11 +1,11 @@
 <?php
 
-use SilverStripe\Elastica\ResultList;
+use Symbiote\Elastica\ResultList;
 
 /**
  * @author marcus
  */
-class ExtensibleElasticService extends SilverStripe\Elastica\ElasticaService {
+class ExtensibleElasticService extends Symbiote\Elastica\ElasticaService {
     
     /**
 	 * A mapping of all the available query builders
@@ -67,7 +67,7 @@ class ExtensibleElasticService extends SilverStripe\Elastica\ElasticaService {
         
     }
     
-    public function getSolrFieldName($field, $classNames = array('Page')) {
+    public function getIndexFieldName($field, $classNames = array('Page')) {
 		return $field;
 	}
     
