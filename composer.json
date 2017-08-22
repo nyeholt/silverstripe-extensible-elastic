@@ -1,0 +1,27 @@
+{
+	"name": "nyeholt/silverstripe-extensible-elastic",
+	"description": "An elastic search adapter for extensible search",
+	"type": "silverstripe-module",
+	"keywords": [
+		"silverstripe",
+		"search",
+		"elastic search",
+		"full-text"
+	],
+	"homepage": "https://github.com/nyeholt/silverstripe-extensible-elastic",
+	"license": "BSD-3-Clause",
+	"authors": [{
+		"name": "Marcus Nyeholt",
+		"email": "marcus@symbiote.com.au"
+	}],
+	"require": {
+		"silverstripe/cms": "~3.5"
+	},
+	"extra": {
+		"installer-name": "extensible-elastic",
+		"branch-alias": {
+			"dev-master": "1.0.x-dev"
+		}
+	}
+}
+
