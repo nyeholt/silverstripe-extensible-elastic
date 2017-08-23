@@ -374,12 +374,12 @@ class ElasticaQueryBuilder  {
 
 		// Determine the viewing stage to exclude, as transport routes/stops have no stage.
 
-		$exclude = (Versioned::current_stage() === 'Live') ? 'Stage' : 'Live';
+		$include = (Versioned::current_stage() === 'Live') ? 'Live' : 'Stage';
 //		$query->addMustNot(new Query\QueryString("SS_Stage:{$exclude}"));
         
-        $exclusion = new Query\BoolQuery();
-        $exclusion->addMustNot(new Query\QueryString("SS_Stage:{$exclude}"));
-        $query->addFilter($exclusion);
+        $inclusion = new Query\BoolQuery();
+        $inclusion->addMust(new Query\QueryString("SS_Stage:{$include}"));
+        $query->addFilter($inclusion);
 
 		// Determine the filters to be applied, separating the class hierarchy restriction.
 
@@ -401,7 +401,10 @@ class ElasticaQueryBuilder  {
 			else {
 				$string = $hierarchy;
 			}
-			$query->addFilter(new Query\QueryString($string));
+
+            $inclusion = new Query\BoolQuery();
+            $inclusion->addMust(new Query\QueryString($string));
+            $query->addFilter($inclusion);
 		}
 
 		// Determine the value specific boosting to be applied, wrapping around the boolean query.
@@ -436,7 +439,7 @@ class ElasticaQueryBuilder  {
 	 * @param string $query
 	 */
 	public function addFilter($query, $value = null) {
-        if ($query == "(ClassNameHierarchy_ms") {
+        if ($query == "(ClassNameHierarchy") {
 			// okay, if we've been given a hack... we'll try and fix it all up again
             $query = "$query:$value";
         }

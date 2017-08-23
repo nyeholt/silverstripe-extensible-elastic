@@ -56,7 +56,7 @@ if (class_exists('ExtensibleSearchPage')) {
                     _t('ExtensibleSearchPage.INCLUDE_FIELDS', 'Search On Fields'), $objFields), 'Content');
             $fields->addFieldToTab('Root.Main',
                 MultiValueTextField::create('ExtraSearchFields',
-                    _t('SolrSearch.EXTRA_FIELDS', 'Custom solr fields to search')), 'Content');
+                    _t('ElasticSearch.EXTRA_FIELDS', 'Custom fields to search')), 'Content');
 
             $this->addSortFields($fields, $objFields);
             $this->addBoostFields($fields, $objFields);
@@ -186,7 +186,7 @@ if (class_exists('ExtensibleSearchPage')) {
                 if (class_exists($classType)) {
                     $item      = singleton($classType);
                     $fields    = $item->getElasticaFields();
-                    $allFields = array_merge($allFields, $fields);
+                    $allFields = array_merge($allFields, $fields instanceof \ArrayObject ? $fields->getArrayCopy() : $fields);
                 }
             }
 
@@ -258,19 +258,19 @@ if (class_exists('ExtensibleSearchPage')) {
             if (count($types)) {
                 $sortBy         = $this->searchService->getSortFieldName($sortBy, $types);
                 $hierarchyTypes = array();
-                $parents        = $this->owner->SearchTrees()->count() ? implode(' OR ParentsHierarchy_ms:',
+                $parents        = $this->owner->SearchTrees()->count() ? implode(' OR ParentsHierarchy:',
                         $this->owner->SearchTrees()->column('ID')) : null;
                 foreach ($types as $type) {
                     // Search against site tree elements with parent hierarchy restriction.
                     if ($parents && (ClassInfo::baseDataClass($type) === 'SiteTree')) {
-                        $hierarchyTypes[] = "{$type} AND (ParentsHierarchy_ms:{$parents}))";
+                        $hierarchyTypes[] = "{$type} AND (ParentsHierarchy:{$parents}))";
                     }
                     // Search against other data objects without parent hierarchy restriction.
                     else {
                         $hierarchyTypes[] = "{$type})";
                     }
                 }
-                $builder->addFilter('(ClassNameHierarchy_ms', implode(' OR (ClassNameHierarchy_ms:', $hierarchyTypes));
+                $builder->addFilter('(ClassNameHierarchy', implode(' OR (ClassNameHierarchy:', $hierarchyTypes));
             }
             if (!$sortBy) {
                 $sortBy = 'score';
@@ -334,6 +334,9 @@ if (class_exists('ExtensibleSearchPage')) {
 
             $this->owner->extend('updateQueryBuilder', $builder);
             $this->currentQuery = $this->searchService->query($builder, $offset, $limit, $params);
+
+            $o = $this->currentQuery->getQuery()->toArray();
+            $raw = json_encode($o);
             return $this->currentQuery;
         }
 
