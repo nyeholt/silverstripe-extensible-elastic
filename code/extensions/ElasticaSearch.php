@@ -34,7 +34,8 @@ if (class_exists('ExtensibleSearchPage')) {
          * @var \Symbiote\Elastica\ElasticaService
          */
         public $searchService;
-        protected $currentQuery;
+        protected $currentResults;
+
         public static $filter_param = 'filter';
 
         public function updateExtensibleSearchPageCMSFields(\FieldList $fields)
@@ -208,10 +209,10 @@ if (class_exists('ExtensibleSearchPage')) {
             return $listType;
         }
 
-        public function getQuery()
+        public function getResults()
         {
-            if ($this->currentQuery) {
-                return $this->currentQuery;
+            if ($this->currentResults) {
+                return $this->currentResults;
             }
 
             $query   = null;
@@ -333,11 +334,9 @@ if (class_exists('ExtensibleSearchPage')) {
             }
 
             $this->owner->extend('updateQueryBuilder', $builder);
-            $this->currentQuery = $this->searchService->query($builder, $offset, $limit, $params);
+            $this->currentResults = $this->searchService->query($builder, $offset, $limit, $params);
 
-            $o = $this->currentQuery->getQuery()->toArray();
-            $raw = json_encode($o);
-            return $this->currentQuery;
+            return $this->currentResults;
         }
 
         public function updateQueryBuilder($builder)
@@ -378,10 +377,10 @@ if (class_exists('ExtensibleSearchPage')) {
          */
         public function AllFacets()
         {
-            if (!$this->getQuery()) {
+            if (!$this->getResults()) {
                 return new ArrayList(array());
             }
-            $facets  = $this->getQuery()->getFacets();
+            $facets  = $this->getResults()->getFacets();
             $result  = array();
             $mapping = $this->facetFieldMapping();
             if (!is_array($facets)) {
@@ -443,10 +442,10 @@ if (class_exists('ExtensibleSearchPage')) {
          */
         public function currentFacets($term = null)
         {
-            if (!$this->getQuery()) {
+            if (!$this->getResults()) {
                 return new ArrayList(array());
             }
-            $facets        = $this->getQuery()->getFacets();
+            $facets        = $this->getResults()->getFacets();
             $queryFacets   = $this->owner->queryFacets();
             $me            = $this->owner;
             $convertFacets = function ($term, $raw) use ($facets, $queryFacets, $me) {
@@ -558,7 +557,7 @@ if (class_exists('ExtensibleSearchPage')) {
         {
 
             $request = $this->owner->getRequest();
-            $query   = $this->owner->data()->getQuery();
+            $query   = $this->owner->data()->getResults();
 
             // The aggregations.
             $aggregations = ArrayList::create();
@@ -609,7 +608,7 @@ if (class_exists('ExtensibleSearchPage')) {
         {
 
             $request = $this->owner->getRequest();
-            $query   = $this->owner->data()->getQuery();
+            $query   = $this->owner->data()->getResults();
 
             // Determine the selected facets/aggregations.
 
@@ -650,9 +649,8 @@ if (class_exists('ExtensibleSearchPage')) {
          */
         public function getSearchResults($data = null, $form = null)
         {
-
             $request = $this->owner->getRequest();
-            $query   = $this->owner->data()->getQuery();
+            $query   = $this->owner->data()->getResults();
             /* @var $query SilverStripe\Elastica\ResultList */
 
             // Determine the selected facets/aggregations to apply.
