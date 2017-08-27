@@ -150,7 +150,7 @@ if (class_exists('ExtensibleSearchPage')) {
         protected function addBoostFields($fields, $objFields)
         {
             $boostVals = array();
-            for ($i = 1; $i <= 5; $i++) {
+            for ($i = 1; $i <= 10; $i++) {
                 $boostVals[$i] = $i;
             }
 
@@ -336,6 +336,10 @@ if (class_exists('ExtensibleSearchPage')) {
             $this->owner->extend('updateQueryBuilder', $builder);
             $this->currentResults = $this->searchService->query($builder, $offset, $limit, $params);
 
+            if (isset($_GET['debug']) && Permission::check('ADMIN')) {
+                $o = $this->currentResults->getQuery()->toArray();
+                echo json_encode($o);
+            }
             return $this->currentResults;
         }
 
@@ -701,7 +705,7 @@ if (class_exists('ExtensibleSearchPage')) {
                 $resultData = array();
             }
 
-            $data = array(
+            $data = new \ArrayObject(array(
                 'Message' => $message,
                 'Results' => $results,
                 'Count' => $count,
@@ -709,9 +713,11 @@ if (class_exists('ExtensibleSearchPage')) {
                 'Title' => $this->owner->data()->Title,
                 'ResultData' => ArrayData::create($resultData),
                 'TimeTaken' => $elapsed
-            );
+            ));
 
-            return $data;
+            $this->owner->extend('updateSearchResults', $data);
+
+            return $data->getArrayCopy();
         }
     }
 }
