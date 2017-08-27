@@ -409,15 +409,18 @@ class ElasticaQueryBuilder  {
 
 		// Determine the value specific boosting to be applied, wrapping around the boolean query.
 
-		$boosted = new Query\FunctionScore();
-		$boosted->setQuery($query);
+//		$boosted = new Query\FunctionScore();
+//		$boosted->setQuery($query);
 		foreach($this->boostFieldValues as $field => $boost) {
-            $boosted->addFunction('boost_factor', (float)$boost, new Query\QueryString($field));
+            $boostQ = new Query\QueryString($field);
+            $boostQ->setBoost((float) $boost);
+            $query->addShould($boostQ);
+//            $boosted->addFunction('boost_factor', (float)$boost, new Query\QueryString($field));
 		}
 
 		// Instantiate the query object using this boosting wrapper.
-
-		$query = new Query($boosted);
+//
+		$query = new Query($query);
 
 		// Determine the faceting/aggregation.
 
@@ -428,6 +431,11 @@ class ElasticaQueryBuilder  {
 			$aggregation->setField($facet);
 			$query->addAggregation($aggregation);
 		}
+
+//        $o = $query->toArray();
+//
+//        $p = json_encode($o);
+
 		return $query;
 	}
 	
