@@ -22,7 +22,12 @@ class ExtensibleElasticService extends Symbiote\Elastica\ElasticaService {
     }
 
     public function query($query, $offset = 0, $limit = 20, $params = array(), $andWith = array()) {
-        $elasticQuery = $query->toQuery();
+        if ($query instanceof ElasticaQueryBuilder) {
+            $elasticQuery = $query->toQuery();
+        } else {
+            $elasticQuery = $query;
+        }
+        
         $results = new ResultList($this->getIndex(), $elasticQuery);
 
 		// The result list needs to be limited so the pagination is looking at the correct page.
