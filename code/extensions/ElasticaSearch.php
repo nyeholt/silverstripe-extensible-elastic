@@ -712,7 +712,8 @@ if (class_exists('ExtensibleSearchPage')) {
                 'Query' => Varchar::create_field('Varchar', $term),
                 'Title' => $this->owner->data()->Title,
                 'ResultData' => ArrayData::create($resultData),
-                'TimeTaken' => $elapsed
+                'TimeTaken' => $elapsed,
+                'RawQuery' => json_encode($query->getQuery()->toArray())
             ));
 
             $this->owner->extend('updateSearchResults', $data);
