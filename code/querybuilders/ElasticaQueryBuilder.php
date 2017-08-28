@@ -409,13 +409,13 @@ class ElasticaQueryBuilder  {
 
 		// Determine the value specific boosting to be applied, wrapping around the boolean query.
 
-//		$boosted = new Query\FunctionScore();
-//		$boosted->setQuery($query);
 		foreach($this->boostFieldValues as $field => $boost) {
-            $boostQ = new Query\QueryString($field);
+            // we use a constant score here because the expectation is that
+            // it's an explicit match, not that the match will be weighted before
+            // being boosted
+            $boostQ = new Query\ConstantScore(new Query\QueryString($field));
             $boostQ->setBoost((float) $boost);
             $query->addShould($boostQ);
-//            $boosted->addFunction('boost_factor', (float)$boost, new Query\QueryString($field));
 		}
 
 		// Instantiate the query object using this boosting wrapper.
