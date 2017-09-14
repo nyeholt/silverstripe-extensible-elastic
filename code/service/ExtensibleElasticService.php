@@ -14,6 +14,7 @@ class ExtensibleElasticService extends Symbiote\Elastica\ElasticaService {
 	 */
 	protected $queryBuilders = array();
 
+
     
     public function __construct(\Elastica\Client $client, $index) {
         parent::__construct($client, $index);
@@ -21,14 +22,18 @@ class ExtensibleElasticService extends Symbiote\Elastica\ElasticaService {
         $this->queryBuilders['default'] = 'ElasticaQueryBuilder';
     }
 
-    public function query($query, $offset = 0, $limit = 20, $params = array(), $andWith = array()) {
+    public function query($query, $offset = 0, $limit = 20, $resultClass = 'ResultList') {
+        // check for _old_ param structure
+        if (is_array($resultClass) || (is_string($resultClass) && !class_exists($resultClass))) {
+            $resultClass = 'ResultList';
+        }
         if ($query instanceof ElasticaQueryBuilder) {
             $elasticQuery = $query->toQuery();
         } else {
             $elasticQuery = $query;
         }
         
-        $results = new ResultList($this->getIndex(), $elasticQuery);
+        $results = new $resultClass($this->getIndex(), $elasticQuery);
 
 		// The result list needs to be limited so the pagination is looking at the correct page.
 

@@ -31,7 +31,7 @@ if (class_exists('ExtensibleSearchPage')) {
 
         /**
          *
-         * @var \Symbiote\Elastica\ElasticaService
+         * @var \Symbiote\Elastica\ExtensibleElasticService
          */
         public $searchService;
         protected $currentResults;
@@ -321,20 +321,8 @@ if (class_exists('ExtensibleSearchPage')) {
                 }
             }
 
-            $params = array(
-                'facet' => 'true',
-                'facet.field' => $this->fieldsForFacets(),
-                'facet.limit' => 10,
-                'facet.mincount' => $this->owner->MinFacetCount ? $this->owner->MinFacetCount : 1,
-                'fl' => '*,score'
-            );
-            $fq     = $this->owner->queryFacets();
-            if (count($fq)) {
-                $params['facet.query'] = array_keys($fq);
-            }
-
             $this->owner->extend('updateQueryBuilder', $builder);
-            $this->currentResults = $this->searchService->query($builder, $offset, $limit, $params);
+            $this->currentResults = $this->searchService->query($builder, $offset, $limit);
 
             if (isset($_GET['debug']) && Permission::check('ADMIN')) {
                 $o = $this->currentResults->getQuery()->toArray();
@@ -713,7 +701,7 @@ if (class_exists('ExtensibleSearchPage')) {
                 'Title' => $this->owner->data()->Title,
                 'ResultData' => ArrayData::create($resultData),
                 'TimeTaken' => $elapsed,
-                'RawQuery' => json_encode($query->getQuery()->toArray())
+                'RawQuery' => $query ? json_encode($query->getQuery()->toArray()) : ''
             ));
 
             $this->owner->extend('updateSearchResults', $data);
