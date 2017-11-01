@@ -22,11 +22,14 @@ class ExtensibleElasticService extends Symbiote\Elastica\ElasticaService {
         $this->queryBuilders['default'] = 'ElasticaQueryBuilder';
     }
 
-    public function query($query, $offset = 0, $limit = 20, $resultClass = 'ResultList') {
+    public function query($query, $offset = 0, $limit = 20, $resultClass = '') {
         // check for _old_ param structure
-        if (is_array($resultClass) || (is_string($resultClass) && !class_exists($resultClass))) {
-            $resultClass = 'ResultList';
+        if (!$resultClass ||
+            is_array($resultClass) || 
+            is_string($resultClass) && !class_exists($resultClass)) {
+            $resultClass = 'Symbiote\Elastica\ResultList';
         }
+
         if ($query instanceof ElasticaQueryBuilder) {
             $elasticQuery = $query->toQuery();
         } else {
