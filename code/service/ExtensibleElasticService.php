@@ -1,6 +1,13 @@
 <?php
 
+namespace Symbiote\Elastic;
+
+
 use Symbiote\Elastica\ResultList;
+use Injector;
+use Symbiote\Elastic\ElasticaQueryBuilder;
+
+
 
 /**
  * @author marcus
@@ -19,7 +26,7 @@ class ExtensibleElasticService extends Symbiote\Elastica\ElasticaService {
     public function __construct(\Elastica\Client $client, $index) {
         parent::__construct($client, $index);
         
-        $this->queryBuilders['default'] = 'ElasticaQueryBuilder';
+        $this->queryBuilders['default'] = ElasticaQueryBuilder::class;
     }
 
     public function query($query, $offset = 0, $limit = 20, $resultClass = '') {

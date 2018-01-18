@@ -1,7 +1,38 @@
 <?php
 
+namespace Symbiote\Elastic;
+
+
 use Elastica\Aggregation;
 use Elastica\Query;
+use DataExtension;
+use FieldList;
+use SiteTree;
+use Config;
+use MultiValueDropdownField;
+use MultiValueTextField;
+use DropdownField;
+use KeyValueField;
+use HeaderField;
+use NumericField;
+use ArrayObject;
+use ClassInfo;
+use Permission;
+use ArrayList;
+use ViewableData;
+use Varchar;
+use ArrayData;
+use InvalidArgumentException;
+use Extension;
+use Form;
+use CheckBoxSetField;
+use HTTP;
+use Exception;
+use SS_Log;
+use Convert;
+use Symbiote\Elastic\ElasticaSearch;
+
+
 
 if (class_exists('ExtensibleSearchPage')) {
 
@@ -45,7 +76,7 @@ if (class_exists('ExtensibleSearchPage')) {
             $types  = SiteTree::page_type_classes();
             $source = array_combine($types, $types);
 
-            $extraSearchTypes = Config::inst()->get('ElasticaSearch', 'additional_search_types');
+            $extraSearchTypes = Config::inst()->get(ElasticaSearch::class, 'additional_search_types');
             ksort($source);
             $source = is_array($extraSearchTypes) ? array_merge($source, $extraSearchTypes) : $source;
             $types  = MultiValueDropdownField::create('SearchType',
@@ -390,7 +421,7 @@ if (class_exists('ExtensibleSearchPage')) {
 
         public function fieldsForFacets()
         {
-            $fields      = Config::inst()->get('ElasticaSearch', 'facets');
+            $fields      = Config::inst()->get(ElasticaSearch::class, 'facets');
             $facetFields = array('FacetFields', 'CustomFacetFields');
             if (!$fields) {
                 $fields = array();

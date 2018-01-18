@@ -1,5 +1,14 @@
 <?php
 
+namespace Symbiote\Elastic;
+
+use ModelAdmin;
+use TextareaField;
+use FormAction;
+use Exception;
+use PjaxResponseNegotiator;
+
+
 /**
  * @author marcus
  */

@@ -1,6 +1,11 @@
 <?php
 
+namespace Symbiote\Elastic;
+
+
 use Elastica\Query;
+use Versioned;
+
 
 /**
  * @author marcus

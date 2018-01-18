@@ -1,5 +1,17 @@
 <?php
 
+namespace Symbiote\Elastic;
+
+use ArrayList;
+use Versioned;
+use SolrSearchService;
+use DataObject;
+use PaginatedList;
+use Injector;
+use ArrayData;
+use stdClass;
+
+
 /**
  * A Solr result set that provides access to results of a solr query, either as
  * a data object set, or as more specific solr items
