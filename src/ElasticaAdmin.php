@@ -1,27 +1,25 @@
 <?php
 
-namespace Symbiote\Elastic;
+namespace Symbiote\ElasticSearch;
 
-use ModelAdmin;
-use TextareaField;
-use FormAction;
+use SilverStripe\Admin\ModelAdmin;
+use SilverStripe\Forms\TextareaField;
+use SilverStripe\Forms\FormAction;
+use SilverStripe\Control\PjaxResponseNegotiator;
 use Exception;
-use PjaxResponseNegotiator;
-
 
 /**
  * @author marcus
  */
 class ElasticaAdmin extends ModelAdmin {
     private static $url_segment = 'elasticsearch';
-    private static $managed_models = array('ExtensibleSearch');
+    private static $managed_models = [];
     private static $menu_title = 'Elastic Search';
     
     public function getEditForm($id = null, $fields = null) {
         $form = parent::getEditForm($id, $fields);
         
         $form->Fields()->insertBefore($this->modelClass, TextareaField::create('rawquery', 'Query')->setRows(50));
-        $form->Fields()->removeByName('ExtensibleSearch');
         $form->Actions()->push(FormAction::create('execute', 'Run Query'));
         
         return $form;

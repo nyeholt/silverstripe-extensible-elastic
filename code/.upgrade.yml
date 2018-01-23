@@ -1,7 +1,0 @@
-mappings:
-  ElasticaAdmin: Symbiote\Elastic\ElasticaAdmin
-  ElasticaSearch: Symbiote\Elastic\ElasticaSearch
-  ElasticaSearch_Controller: Symbiote\Elastic\ElasticaSearch_Controller
-  ElasticaQueryBuilder: Symbiote\Elastic\ElasticaQueryBuilder
-  ElasticaResultSet: Symbiote\Elastic\ElasticaResultSet
-  ExtensibleElasticService: Symbiote\Elastic\ExtensibleElasticService

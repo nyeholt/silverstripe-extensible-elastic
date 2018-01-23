@@ -1,18 +1,18 @@
 <?php
 
-namespace Symbiote\Elastic;
+namespace Symbiote\ElasticSearch;
 
 
-use Symbiote\Elastica\ResultList;
-use Injector;
-use Symbiote\Elastic\ElasticaQueryBuilder;
+use Heyday\Elastica\ResultList;
+use SilverStripe\Core\Injector\Injector;
+use Symbiote\ElasticSearch\ElasticaQueryBuilder;
 
 
 
 /**
  * @author marcus
  */
-class ExtensibleElasticService extends Symbiote\Elastica\ElasticaService {
+class ExtensibleElasticService extends Symbiote\ElasticSearcha\ElasticaService {
     
     /**
 	 * A mapping of all the available query builders
@@ -34,7 +34,7 @@ class ExtensibleElasticService extends Symbiote\Elastica\ElasticaService {
         if (!$resultClass ||
             is_array($resultClass) || 
             is_string($resultClass) && !class_exists($resultClass)) {
-            $resultClass = 'Symbiote\Elastica\ResultList';
+            $resultClass = 'Heyday\Elastica\ResultList';
         }
 
         if ($query instanceof ElasticaQueryBuilder) {

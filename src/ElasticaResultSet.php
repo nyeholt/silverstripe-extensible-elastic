@@ -1,14 +1,11 @@
 <?php
 
-namespace Symbiote\Elastic;
+namespace Symbiote\ElasticSearch;
 
-use ArrayList;
-use Versioned;
-use SolrSearchService;
-use DataObject;
-use PaginatedList;
-use Injector;
-use ArrayData;
+use SilverStripe\ORM\ArrayList;
+use SilverStripe\Versioned\Versioned;
+use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\PaginatedList;
 use stdClass;
 
 
@@ -22,7 +19,8 @@ use stdClass;
 class ElasticaResultSet {
 
 	/**
-	 * The raw lucene query issued to 
+	 * The raw lucene query issued
+     * 
 	 * @var String
 	 */
 	protected $query;
@@ -79,14 +77,6 @@ class ElasticaResultSet {
 
 	public function getErrors() {
 		
-	}
-
-	/**
-	 * @return String
-	 *			The raw query issued to generate this result set
-	 */
-	public function getLuceneQuery() {
-		return $this->luceneQuery;
 	}
 
 	/**
@@ -152,10 +142,8 @@ class ElasticaResultSet {
 						continue;
 					}
 
-					if (strpos($doc->id, SolrSearchService::RAW_DATA_KEY) === 0) {
+					if (strpos($doc->id, '@TODO_RAW_THINGS') === 0) {
 						$object = $this->inflateRawResult($doc, $expandRawObjects);
-
-						// $object = new ArrayData($data);
 					} else {
 						if (!class_exists($type)) {
 							continue;
@@ -210,9 +198,6 @@ class ElasticaResultSet {
 						->setPageStart($documents->start)
 						->setTotalItems($documents->numFound)
 						->setLimitItems(false);
-				
-//				$paginatedSet->setPaginationFromQuery($set->dataQuery()->query());
-				// $this->dataObjects->setPageLimits($documents->start, $this->queryParameters->limit, $documents->numFound);
 			}
 
 		}
@@ -220,71 +205,6 @@ class ElasticaResultSet {
 		return $this->dataObjects;
 	}
 	
-	/**
-	 * Inflate a raw result into an object of a particular type
-	 * 
-	 * If the raw result has a SolrSearchService::SERIALIZED_OBJECT field,
-	 * and convertToObject is true, that serialized data will be used to create
-	 * a new object of type $doc['SS_TYPE']
-	 * 
-	 * @param array $doc
-	 * @param boolean $convertToObject
-	 */
-	protected function inflateRawResult($doc, $convertToObject = true) {
-		
-		$field = SolrSearchService::SERIALIZED_OBJECT . '_t';
-		if (isset($doc->$field) && $convertToObject) {
-			$raw = unserialize($doc->$field);
-			if (isset($raw['SS_TYPE'])) {
-				$class = $raw['SS_TYPE'];
-
-				$object = Injector::inst()->create($class);
-				$object->update($raw);
-				
-				$object->ID = str_replace(SolrSearchService::RAW_DATA_KEY, '', $doc->id);
-				
-				return $object;
-			} 
-			
-			return ArrayData::create($raw);
-		}
-
-		$data = array(
-			'ID'		=> str_replace(SolrSearchService::RAW_DATA_KEY, '', $doc->id),
-		);
-
-		if (isset($doc->attr_SS_URL[0])) {
-			$data['Link'] = $doc->attr_SS_URL[0];
-		}
-		
-		if (isset($doc->title)) {
-			$data['Title'] = $doc->title;
-		}
-		
-		if (isset($doc->title_as)) {
-			$data['Title'] = $doc->title_as;
-		}
-
-		foreach ($doc as $key => $val) {
-			if ($key != 'attr_SS_URL') {
-				$name = null;
-				if (strpos($key, 'attr_') === 0) {
-					$name = str_replace('attr_', '', $key);
-				} else if (preg_match('/(.*?)_('. implode('|', self::$solr_attrs) .')$/', $key, $matches)) {
-					$name = $matches[1];
-				}
-
-				$val = $doc->$key;
-				if (is_array($val) && count($val) == 1) {
-					$data[$name] = $val[0];
-				} else {
-					$data[$name] = $val;
-				}
-			}
-		}
-		
-		return ArrayData::create($data);
-	}
 
 	protected $returnedFacets;
 	
