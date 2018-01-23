@@ -310,7 +310,7 @@ class ElasticaQueryBuilder
 
         // Determine the viewing stage to exclude, as transport routes/stops have no stage.
 
-        $exclude = (Versioned::current_stage() === 'Live') ? 'Stage' : 'Live';
+        $exclude = (Versioned::get_stage() === 'Live') ? 'Stage' : 'Live';
 
         $query->addMustNot(new Query\QueryString("SS_Stage:{$exclude}"));
         // Determine the filters to be applied, separating the class hierarchy restriction.
@@ -387,7 +387,7 @@ class ElasticaQueryBuilder
 
         // Determine the viewing stage to exclude, as transport routes/stops have no stage.
 
-        $include = (Versioned::current_stage() === 'Live') ? 'Live' : 'Stage';
+        $include = (Versioned::get_stage() === 'Live') ? 'Live' : 'Stage';
 //		$query->addMustNot(new Query\QueryString("SS_Stage:{$exclude}"));
 
         $inclusion = new Query\BoolQuery();

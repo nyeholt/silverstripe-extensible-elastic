@@ -2,8 +2,8 @@
 
 namespace Symbiote\ElasticSearch;
 
-
-use Heyday\Elastica\ResultList;
+use Elastica\Client;
+use Heyday\Elastica\ElasticaService;
 use SilverStripe\Core\Injector\Injector;
 use Symbiote\ElasticSearch\ElasticaQueryBuilder;
 
@@ -12,7 +12,7 @@ use Symbiote\ElasticSearch\ElasticaQueryBuilder;
 /**
  * @author marcus
  */
-class ExtensibleElasticService extends Symbiote\ElasticSearcha\ElasticaService {
+class ExtensibleElasticService extends ElasticaService {
     
     /**
 	 * A mapping of all the available query builders
@@ -21,11 +21,9 @@ class ExtensibleElasticService extends Symbiote\ElasticSearcha\ElasticaService {
 	 */
 	protected $queryBuilders = array();
 
-
     
-    public function __construct(\Elastica\Client $client, $index) {
+    public function __construct(Client $client, $index) {
         parent::__construct($client, $index);
-        
         $this->queryBuilders['default'] = ElasticaQueryBuilder::class;
     }
 
@@ -69,7 +67,7 @@ class ExtensibleElasticService extends Symbiote\ElasticSearcha\ElasticaService {
 	 * Gets the query builder for the given search type
 	 *
 	 * @param string $type 
-	 * @return SolrQueryBuilder
+	 * @return ElasticaQueryBuilder
 	 */
 	public function getQueryBuilder($type='default') {
 		return isset($this->queryBuilders[$type]) ? Injector::inst()->create($this->queryBuilders[$type]) : Injector::inst()->create($this->queryBuilders['default']);

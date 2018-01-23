@@ -2,8 +2,6 @@
 
 namespace Symbiote\ElasticSearch;
 
-use Elastica\Aggregation;
-use Elastica\Query;
 use SilverStripe\ORM\DataExtension;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
@@ -14,12 +12,12 @@ use Symbiote\MultiValueField\Fields\KeyValueField;
 use SilverStripe\Forms\HeaderField;
 use SilverStripe\Forms\NumericField;
 
-use SilverStripe\Core\ClassInfo;
-use SilverStripe\Security\Permission;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\View\ViewableData;
 use SilverStripe\ORM\FieldType\DBVarchar;
 use SilverStripe\View\ArrayData;
+
+use SilverStripe\Forms\FieldList;
 
 
 use Psr\Log\LoggerInterface;
@@ -79,7 +77,12 @@ class ElasticaSearch extends DataExtension
      */
     public $logger;
 
-    public function updateExtensibleSearchPageCMSFields(\FieldList $fields)
+
+    public function getSelectableFields() {
+        // only exists due to parent page type not implementing it, but failing with a custom engine
+    }
+
+    public function updateExtensibleSearchPageCMSFields(FieldList $fields)
     {
         $objFields = $this->owner->getSelectableFields();
 
@@ -210,175 +213,15 @@ class ElasticaSearch extends DataExtension
         $f->setRightTitle('Enter a field name, followed by the value to boost if found in the result set, eg "title:Home" ');
     }
 
-    public function setElasticaSearchService($v)
-    {
-        if ($v instanceof ExtensibleElasticService) {
-            $this->searchService = $v;
-        }
-    }
 
-    public function getSelectableFields($listType = null, $excludeGeo = true)
-    {
-        if (!$listType) {
-            $listType = $this->owner->searchableTypes('Page');
-        }
 
-        $allFields = array();
-        foreach ($listType as $classType) {
-            if (class_exists($classType)) {
-                $item      = singleton($classType);
-                $fields    = $item->getElasticaFields();
-                $allFields = array_merge($allFields, $fields instanceof ArrayObject ? $fields->getArrayCopy() : $fields);
-            }
-        }
-
-        $allFields = array_keys($allFields);
-        $allFields = array_combine($allFields, $allFields);
-
-        $allFields['_score'] = 'Score';
-
-        ksort($allFields);
-        return $allFields;
-    }
-
-    public function searchableTypes($default = null)
-    {
-        $listType = $this->owner->SearchType ? $this->owner->SearchType->getValues() : null;
-        if (!$listType) {
-            $listType = $default ? array($default) : null;
-        }
-        return $listType;
-    }
-
-    public function getResults()
-    {
-        if ($this->currentResults) {
-            return $this->currentResults;
-        }
-
-        $query   = null;
-        $builder = $this->searchService->getQueryBuilder($this->owner->QueryType);
-        if (isset($_GET['Search'])) {
-            $query = $_GET['Search'];
-            // lets convert it to a base solr query
-            $builder->baseQuery($query);
-        }
-        $sortBy  = isset($_GET['SortBy']) ? $_GET['SortBy'] : $this->owner->SortBy;
-        $sortDir = isset($_GET['SortDirection']) ? $_GET['SortDirection'] : $this->owner->SortDirection;
-        $types   = $this->owner->searchableTypes();
-        // allow user to specify specific type
-        if (isset($_GET['SearchType'])) {
-            $fixedType = $_GET['SearchType'];
-            if (in_array($fixedType, $types)) {
-                $types = array($fixedType);
-            }
-        }
-        // (strlen($this->SearchType) ? $this->SearchType : null);
-        $fields = $this->getSelectableFields();
-        // if we've explicitly set a sort by, then we want to make sure we have a type
-        // so we can resolve what the field name in solr is. Otherwise we don't care about type
-        // overly much
-        if (!count($types) && $sortBy) {
-            // default to page
-            $types = Config::inst()->get(__CLASS__, 'default_searchable_types');
-        }
-        if (!isset($fields[$sortBy])) {
-            $sortBy = 'score';
-        }
-        $activeFacets = $this->getActiveFacets();
-        if (count($activeFacets)) {
-            foreach ($activeFacets as $facetName => $facetValues) {
-                foreach ($facetValues as $value) {
-                    $builder->addFilter($facetName, $value);
-                }
-            }
-        }
-        $offset = isset($_GET['start']) ? $_GET['start'] : 0;
-        $limit  = isset($_GET['limit']) ? $_GET['limit'] : ($this->owner->ResultsPerPage ? $this->owner->ResultsPerPage : 10);
-        // Apply any hierarchy filters.
-        if (count($types)) {
-            $sortBy         = $this->searchService->getSortFieldName($sortBy, $types);
-            $hierarchyTypes = array();
-            $parents        = $this->owner->SearchTrees()->count() ? implode(' OR ParentsHierarchy:',
-                    $this->owner->SearchTrees()->column('ID')) : null;
-            foreach ($types as $type) {
-                // Search against site tree elements with parent hierarchy restriction.
-                if ($parents && (ClassInfo::baseDataClass($type) === 'SiteTree')) {
-                    $hierarchyTypes[] = "{$type} AND (ParentsHierarchy:{$parents}))";
-                }
-                // Search against other data objects without parent hierarchy restriction.
-                else {
-                    $hierarchyTypes[] = "{$type})";
-                }
-            }
-            $builder->addFilter('(ClassNameHierarchy', implode(' OR (ClassNameHierarchy:', $hierarchyTypes));
-        }
-        if (!$sortBy) {
-            $sortBy = 'score';
-        }
-        $sortDir        = in_array($sortDir, array('ASC', 'asc', 'Ascending')) ? 'ASC' : 'DESC';
-        $builder->sortBy($sortBy, $sortDir);
-        $selectedFields = $this->owner->SearchOnFields->getValues();
-        $extraFields    = $this->owner->ExtraSearchFields->getValues();
-
-        // the following serves two purposes; filter out the searched on fields to only those that
-        // are in the actually  searched on types, and to map them to relevant solr types
-        if (count($selectedFields)) {
-            $mappedFields = array();
-            foreach ($selectedFields as $field) {
-                $mappedField = $this->searchService->getIndexFieldName($field, $types);
-                // some fields that we're searching on don't exist in the types that the user has selected
-                // to search within
-                if ($mappedField) {
-                    $mappedFields[] = $mappedField;
-                }
-            }
-            if ($extraFields && count($extraFields)) {
-                $mappedFields = array_merge($mappedFields, $extraFields);
-            }
-
-            $builder->queryFields($mappedFields);
-        }
-        if ($boost = $this->owner->BoostFields->getValues()) {
-            $boostSetting = array();
-            foreach ($boost as $field => $amount) {
-                if ($amount > 0) {
-                    $boostSetting[$this->searchService->getIndexFieldName($field, $types)] = $amount;
-                }
-            }
-            $builder->boost($boostSetting);
-        }
-        if ($boost = $this->owner->BoostMatchFields->getValues()) {
-            if (count($boost)) {
-                $builder->boostFieldValues($boost);
-            }
-        }
-        if ($filters = $this->owner->FilterFields->getValues()) {
-            if (count($filters)) {
-                foreach ($filters as $filter => $val) {
-                    $builder->addFilter($filter, $val);
-                }
-            }
-        }
-
-        $this->owner->extend('updateQueryBuilder', $builder);
-        $this->currentResults = $this->searchService->query($builder, $offset, $limit);
-
-        if (isset($_GET['debug']) && Permission::check('ADMIN')) {
-            $o = $this->currentResults->getQuery()->toArray();
-            echo json_encode($o);
-        }
-        return $this->currentResults;
-    }
-
-    public function updateQueryBuilder($builder)
+    public function updateQueryBuilder($builder, $page)
     {
         // This is required to load the faceting/aggregation.
-        $fieldFacets = $this->owner->facetFieldMapping();
+        $fieldFacets = $page->facetFieldMapping();
         if (count($fieldFacets)) {
             $builder->addFacetFields($fieldFacets);
         }
-
 
         if (isset($_GET['UserFilter'])) {
             $filters = $this->owner->UserFilters->getValues();
@@ -392,6 +235,7 @@ class ElasticaSearch extends DataExtension
             }
         }
     }
+
 
     /**
      * Gets a list of facet based filters
@@ -409,6 +253,10 @@ class ElasticaSearch extends DataExtension
      */
     public function AllFacets()
     {
+        $engine = '';
+
+        throw new \Exception("Please update ElasticaSearch::AllFacets");
+
         if (!$this->getResults()) {
             return new ArrayList(array());
         }
