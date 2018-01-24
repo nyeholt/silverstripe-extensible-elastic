@@ -2,21 +2,15 @@
 
 namespace Symbiote\ElasticSearch;
 
-use nglasl\extensible\CustomSearchEngine;
-
-use SilverStripe\Core\ClassInfo;
-use SilverStripe\Security\Permission;
-use SilverStripe\ORM\ArrayList;
-use SilverStripe\View\ViewableData;
-use SilverStripe\ORM\FieldType\DBVarchar;
-use SilverStripe\View\ArrayData;
-
-use SilverStripe\Core\Config\Config;
-
-use Psr\Log\LoggerInterface;
-
 use ArrayObject;
-use InvalidArgumentException;
+use nglasl\extensible\CustomSearchEngine;
+use Psr\Log\LoggerInterface;
+use SilverStripe\Core\ClassInfo;
+use SilverStripe\Core\Config\Config;
+use SilverStripe\ORM\ArrayList;
+use SilverStripe\ORM\PaginatedList;
+use SilverStripe\Security\Permission;
+use function singleton;
 
 /**
  * @author marcus
@@ -25,7 +19,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
 {
     /**
      *
-     * @var \Symbiote\ElasticSearch\ExtensibleElasticService
+     * @var ExtensibleElasticService
      */
     public $searchService;
 
@@ -203,7 +197,12 @@ class ElasticaSearchEngine extends CustomSearchEngine
         $resultSet = $this->searchService->query($builder, $offset, $limit);
         /* @var $resultSet \Heyday\Elastica\ResultList */
 
-        $results = ['Results' => $resultSet->toArray()];
+        $results = PaginatedList::create($resultSet->toArrayList());
+        $results->setPageLength($limit);
+        $results->setPageStart($offset);
+        $results->setTotalItems($resultSet->totalItems());
+
+        $results = ['Results' => $results];
 
         $this->currentResults = $results;
 
