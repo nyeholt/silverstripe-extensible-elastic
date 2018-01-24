@@ -10,7 +10,7 @@ use stdClass;
 
 
 /**
- * A Solr result set that provides access to results of a solr query, either as
+ * A result set that provides access to results of a solr query, either as
  * a data object set, or as more specific solr items
  *
  * @author Marcus Nyeholt <marcus@silverstripe.com.au>

@@ -31,6 +31,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
 
     /**
      * Current result set
+     * 
      * @var ArrayList
      */
     protected $currentResults;
@@ -64,7 +65,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
         foreach ($listType as $classType) {
             if (class_exists($classType)) {
                 $item      = singleton($classType);
-                $fields    = $item->allSearchableFields();
+                $fields    = $item->getElasticaFields();
                 $allFields = array_merge($allFields, $fields instanceof ArrayObject ? $fields->getArrayCopy() : $fields);
             }
         }
@@ -80,7 +81,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
 
     public function searchableTypes($page, $default = null)
     {
-        $listType = $page->SearchType ? $page->SearchType->getValues() : [];
+        $listType = $page->SearchType ? $page->SearchType->getValues() : [$default];
         if (count($listType) === 0) {
             $listType = $default ? array($default) : [];
         }
@@ -199,12 +200,15 @@ class ElasticaSearchEngine extends CustomSearchEngine
         }
 
         $page->extend('updateQueryBuilder', $builder, $page);
-        $results = ['Results' => $this->searchService->query($builder, $offset, $limit)];
+        $resultSet = $this->searchService->query($builder, $offset, $limit);
+        /* @var $resultSet \Heyday\Elastica\ResultList */
+
+        $results = ['Results' => $resultSet->toArray()];
 
         $this->currentResults = $results;
 
         if (isset($_GET['debug']) && Permission::check('ADMIN')) {
-            $o = $this->currentResults->getQuery()->toArray();
+            $o = $resultSet->getQuery()->toArray();
             echo json_encode($o);
         }
         return $this->currentResults;

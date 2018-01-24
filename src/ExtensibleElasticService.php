@@ -27,6 +27,15 @@ class ExtensibleElasticService extends ElasticaService {
         $this->queryBuilders['default'] = ElasticaQueryBuilder::class;
     }
 
+    /**
+     * Queries the elastic index using an elastic query, mapped as an array
+     *
+     * @param ElasticaQueryBuilder|string $query
+     * @param int $offset
+     * @param int $limit
+     * @param string $resultClass
+     * @return Heyday\Elastica\ResultList
+     */
     public function query($query, $offset = 0, $limit = 20, $resultClass = '') {
         // check for _old_ param structure
         if (!$resultClass ||
@@ -42,9 +51,7 @@ class ExtensibleElasticService extends ElasticaService {
         }
         
         $results = new $resultClass($this->getIndex(), $elasticQuery);
-
 		// The result list needs to be limited so the pagination is looking at the correct page.
-
 		$results = $results->limit((int)$limit, (int)$offset);
         return $results;
         
