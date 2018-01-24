@@ -1,7 +1,7 @@
 {
 	"name": "nyeholt/silverstripe-extensible-elastic",
 	"description": "An elastic search adapter for extensible search",
-	"type": "silverstripe-module",
+	"type": "silverstripe-vendormodule",
 	"keywords": [
 		"silverstripe",
 		"search",
@@ -28,7 +28,7 @@
 	"extra": {
 		"installer-name": "extensible-elastic",
 		"branch-alias": {
-			"dev-master": "1.1.x-dev"
+			"dev-master": "2.0.x-dev"
 		}
 	}
 }
