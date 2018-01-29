@@ -17,7 +17,7 @@
 	"require": {
 		"silverstripe/cms": "~4.0",
         "nglasl/silverstripe-extensible-search": "~4.0",
-        "heyday/silverstripe-elastica": "~2.0"
+        "heyday/silverstripe-elastica": "*"
 	},
     "autoload": {
 		"psr-4": { 
