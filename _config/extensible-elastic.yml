@@ -13,9 +13,8 @@ nglasl\extensible\ExtensibleSearchPage:
     - Symbiote\ElasticSearch\ElasticaSearch
 Page:
   indexed_fields: &page_defaults
-    Title:
-      type: string
-    Content:
-      type: string
-    ElementsForSearch:
-      type: string
+    - Title
+    - Content
+    - 
+      ElementsForSearch:
+        type: string
