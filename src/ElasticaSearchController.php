@@ -23,24 +23,23 @@ class ElasticaSearchController extends Extension
             return;
         }
         $filters = $page->UserFilters->getValues();
-        if (!$filters) {
-            $filters = array();
-        }
-        $cbsf = CheckboxSetField::create('UserFilter', '', array_values($filters));
+        if ($filters) {
+            $cbsf = CheckboxSetField::create('UserFilter', '', array_values($filters));
 
-        $filterFieldValues = array();
-        if (isset($_GET['UserFilter'])) {
-            foreach (array_values($filters) as $k => $v) {
-                if (in_array($k, (array) $_GET['UserFilter'])) {
-                    $filterFieldValues[] = $k;
+            $filterFieldValues = array();
+            if (isset($_GET['UserFilter'])) {
+                foreach (array_values($filters) as $k => $v) {
+                    if (in_array($k, (array) $_GET['UserFilter'])) {
+                        $filterFieldValues[] = $k;
+                    }
                 }
+            } else {
+                $filterFieldValues = array_keys(array_values($filters));
             }
-        } else {
-            $filterFieldValues = array_keys(array_values($filters));
-        }
-        $cbsf->setValue($filterFieldValues);
+            $cbsf->setValue($filterFieldValues);
 
-        $form->Fields()->push($cbsf);
+            $form->Fields()->push($cbsf);
+        }
     }
 
     public function getAggregations()
