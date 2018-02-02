@@ -2,24 +2,32 @@
 
 namespace Symbiote\ElasticSearch;
 
-use SilverStripe\Admin\ModelAdmin;
-use SilverStripe\Forms\TextareaField;
-use SilverStripe\Forms\FormAction;
-use SilverStripe\Control\PjaxResponseNegotiator;
+use Elastica\Index;
+use Elastica\Query;
 use Exception;
+use Heyday\Elastica\ElasticaService;
+use nglasl\extensible\ExtensibleSearch;
+use SilverStripe\Admin\ModelAdmin;
+use SilverStripe\Control\PjaxResponseNegotiator;
+use SilverStripe\Forms\FormAction;
+use SilverStripe\Forms\TextareaField;
+use function singleton;
 
 /**
  * @author marcus
  */
 class ElasticaAdmin extends ModelAdmin {
     private static $url_segment = 'elasticsearch';
-    private static $managed_models = [];
+    private static $managed_models = [ExtensibleSearch::class];
     private static $menu_title = 'Elastic Search';
     
     public function getEditForm($id = null, $fields = null) {
         $form = parent::getEditForm($id, $fields);
+
+        $name = str_replace('\\', '-', $this->modelClass);
         
-        $form->Fields()->insertBefore($this->modelClass, TextareaField::create('rawquery', 'Query')->setRows(50));
+        $form->Fields()->insertBefore($name, TextareaField::create('rawquery', 'Query')->setRows(50));
+        $form->Fields()->removeByName($name);
         $form->Actions()->push(FormAction::create('execute', 'Run Query'));
         
         return $form;
@@ -27,10 +35,10 @@ class ElasticaAdmin extends ModelAdmin {
     
     public function execute($data, $form) {
         
-        $index = singleton('ElasticaService')->getIndex();
-        /* @var $index Elastica\Index */
+        $index = singleton(ElasticaService::class)->getIndex();
+        /* @var $index Index */
         $param = json_decode($data['rawquery'], true);
-        $query = new Elastica\Query($param);
+        $query = new Query($param);
         
         $response = '';
         try {
