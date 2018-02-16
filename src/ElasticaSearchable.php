@@ -35,7 +35,7 @@ class ElasticaSearchable extends Searchable
     public function reIndex($stage = '')
     {
         $currentStage = $stage ? $stage : Versioned::get_stage();
-
+        $this->liveIndex = $currentStage === 'Live' ? true : false;
         return parent::reIndex($currentStage);
     }
 
