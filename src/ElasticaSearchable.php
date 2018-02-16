@@ -11,6 +11,8 @@ use SilverStripe\Versioned\Versioned;
 /**
  * Adds additional indexing fields to support broader search usage
  *
+ * Ensures that Versioned content is indexed in an appropriate stage. 
+ *
  * @author marcus
  */
 class ElasticaSearchable extends Searchable
@@ -95,7 +97,6 @@ class ElasticaSearchable extends Searchable
             $indexedInStage = array('Live', 'Stage');
         }
         $document->set('SS_Stage', $indexedInStage);
-
         
         $document->set('PublicView', $this->owner->canView(Member::create()));
 

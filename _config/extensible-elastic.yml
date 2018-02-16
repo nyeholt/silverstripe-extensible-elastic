@@ -2,6 +2,9 @@
 Name: extensible-elastic-config
 ---
 SilverStripe\Core\Injector\Injector:
+  Symbiote\ElasticSearch\VersionedReindexTask:
+    constructor:
+      - %$Heyday\Elastica\ElasticaService
   Symbiote\ElasticSearch\ElasticaSearchEngine:
     properties:
       searchService: %$Heyday\Elastica\ElasticaService
