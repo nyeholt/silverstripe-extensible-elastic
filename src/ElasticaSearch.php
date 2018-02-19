@@ -35,6 +35,7 @@ class ElasticaSearch extends DataExtension
 {
     private static $db = array(
         'QueryType' => 'Varchar',
+        'Fuzziness'      => 'Int',
         'SearchType' => 'MultiValueField', // types that a user can search within
         'SearchOnFields' => 'MultiValueField',
         'ExtraSearchFields' => 'MultiValueField',
@@ -85,6 +86,10 @@ class ElasticaSearch extends DataExtension
     public function updateExtensibleSearchPageCMSFields(FieldList $fields)
     {
         $objFields = $this->owner->getSelectableFields();
+
+        $ff = NumericField::create('Fuzziness', _t('ExtensibleElasticaSearch.FUZZ', 'Term fuzziness'));
+        $ff->setRightTitle('0 means only the exact spelling will be searched, 2 means that up to 2 differences will be considered');
+        $fields->insertBefore('SortBy', $ff);
 
         $types  = SiteTree::page_type_classes();
         $source = array_combine($types, $types);

@@ -10,9 +10,10 @@ use SilverStripe\Versioned\Versioned;
  */
 class ElasticaQueryBuilder
 {
-    public $title = 'Default Elastica';
-    public $version = 2;
+    public $title        = 'Default Elastica';
+    public $version      = 2;
     protected $userQuery = '';
+    protected $fuzziness  = 0;
     protected $fields    = array('Title', 'Content');
     protected $and       = array();
     protected $params    = array();
@@ -85,6 +86,11 @@ class ElasticaQueryBuilder
     public function currentFields()
     {
         return $this->fields;
+    }
+
+    public function setFuzziness($f) {
+        $this->fuzziness = $f;
+        return $this;
     }
 
     public function sortBy($field, $direction)
@@ -226,12 +232,13 @@ class ElasticaQueryBuilder
      */
     public function wildcard($string)
     {
+        $wildcard = $this->fuzziness > 0 ? '~' : '*';
 
         // Appropriately handle the input string if it only consists of a single term, where wildcard characters should not be wrapped around quotations.
 
         $single = (strpos($string, ' ') === false);
         if ($single && (strpos($string, '"') === false)) {
-            return "*{$string}*";
+            return "{$string}$wildcard";
         } else if ($single) {
             return $string;
         }
@@ -243,7 +250,9 @@ class ElasticaQueryBuilder
         if (is_array($string)) {
             $quotation = false;
             foreach ($string as $term) {
-
+                if (!strlen($term)) {
+                    continue;
+                }
                 // Parse a "search phrase" by storing the current state, where wildcard characters should no longer be wrapped.
 
                 if (($quotations = substr_count($term, '"')) > 0) {
@@ -260,16 +269,14 @@ class ElasticaQueryBuilder
                     === 'NOT') || ($term === '!') || (strpos($term, '+') === 0) || (strpos($term, '-') === 0)) {
                     $terms[] = $term;
                 } else {
-                    $term = "*{$term}*";
+                    $term = "{$term}{$wildcard}";
 
                     // When dealing with custom grouping, make sure the search terms have been wrapped.
 
                     $term    = str_replace(array(
-                        '*(',
-                        ')*'
+                        ')' . $wildcard
                         ), array(
-                        '(*',
-                        '*)'
+                        $wildcard. ')'
                         ), $term);
                     $terms[] = $term;
                 }
@@ -367,11 +374,6 @@ class ElasticaQueryBuilder
         if ($this->version < 2) {
             return $this->toVersion1Query();
         }
-        // Instantiate the boolean query.
-
-        $mm = new Query\MultiMatch();
-        $mm->setQuery($this->userQuery);
-
         // Determine the field specific boosting to be applied.
 
         $fields = array();
@@ -381,9 +383,16 @@ class ElasticaQueryBuilder
             }
             $fields[] = $field;
         }
-        $mm->setFields($fields);
+
+        $q = new Query\QueryString($this->wildcard($this->userQuery));
+        $q->setFields($fields);
+
+        if ($this->fuzziness) {
+            $q->setParam('fuzziness', (int) $this->fuzziness);
+        }
+
         $query = new Query\BoolQuery();
-        $query->addMust($mm);
+        $query->addMust($q);
 
         // Determine the viewing stage to exclude, as transport routes/stops have no stage.
 

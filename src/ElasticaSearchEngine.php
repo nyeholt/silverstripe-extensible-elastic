@@ -95,6 +95,11 @@ class ElasticaSearchEngine extends CustomSearchEngine
             // lets convert it to a base solr query
             $builder->baseQuery($query);
         }
+
+        if ($page->Fuzziness) {
+            $builder->setFuzziness($page->Fuzziness);
+        }
+
         $sortBy  = isset($_GET['SortBy']) ? $_GET['SortBy'] : $page->SortBy;
         $sortDir = isset($_GET['SortDirection']) ? $_GET['SortDirection'] : $page->SortDirection;
         $types   = $this->searchableTypes($page);
