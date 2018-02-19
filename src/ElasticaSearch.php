@@ -50,7 +50,7 @@ class ElasticaSearch extends DataExtension
         // filter fields (not used for relevance, just for restricting data set)
         'FilterFields' => 'MultiValueField',
         // filters that users can explicitly choose from
-        'UserFilters' => 'MultiValueField'
+        'UserFilters' => 'MultiValueField',
     );
 
     /**

@@ -20,6 +20,11 @@ class ElasticaQueryBuilder
     protected $filters   = array();
 
     /**
+     * Should 'emtpy' user queries still generate a result set?
+     * @var boolean
+     */
+    protected $allowEmpty = false;
+    /**
      * 	Allow "alpha only sort" fields to be wrapped in wildcard characters when queried against.
      * 	@var boolean
      */
@@ -90,6 +95,11 @@ class ElasticaQueryBuilder
 
     public function setFuzziness($f) {
         $this->fuzziness = $f;
+        return $this;
+    }
+
+    public function setAllowEmpty($v) {
+        $this->allowEmpty = $v;
         return $this;
     }
 
@@ -232,6 +242,9 @@ class ElasticaQueryBuilder
      */
     public function wildcard($string)
     {
+        if (!strlen($string)) {
+            return $string;
+        }
         $wildcard = $this->fuzziness > 0 ? '~' : '*';
 
         // Appropriately handle the input string if it only consists of a single term, where wildcard characters should not be wrapped around quotations.
@@ -384,15 +397,17 @@ class ElasticaQueryBuilder
             $fields[] = $field;
         }
 
-        $q = new Query\QueryString($this->wildcard($this->userQuery));
-        $q->setFields($fields);
-
-        if ($this->fuzziness) {
-            $q->setParam('fuzziness', (int) $this->fuzziness);
-        }
-
         $query = new Query\BoolQuery();
-        $query->addMust($q);
+
+        if (!$this->allowEmpty || strlen($this->userQuery)) {
+            $q = new Query\QueryString($this->wildcard($this->userQuery));
+            $q->setFields($fields);
+
+            if ($this->fuzziness) {
+                $q->setParam('fuzziness', (int) $this->fuzziness);
+            }
+            $query->addMust($q);
+        }
 
         // Determine the viewing stage to exclude, as transport routes/stops have no stage.
 
