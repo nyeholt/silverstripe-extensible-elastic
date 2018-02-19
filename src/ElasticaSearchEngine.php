@@ -38,6 +38,13 @@ class ElasticaSearchEngine extends CustomSearchEngine
     public static $filter_param = 'filter';
 
     /**
+     * Yes, yes we do support hierarchical searches
+     *
+     * @var boolean
+     */
+    public $supports_hierarchy = true;
+
+    /**
      *
      * @var LoggerInterface
      */
@@ -142,17 +149,19 @@ class ElasticaSearchEngine extends CustomSearchEngine
             $hierarchyTypes = array();
             $parents        = $page->SearchTrees()->count() ? implode(' OR ParentsHierarchy:',
                     $page->SearchTrees()->column('ID')) : null;
+
             foreach ($types as $type) {
+                $convertedType = str_replace('\\', "_", $type);
                 // Search against site tree elements with parent hierarchy restriction.
-                if ($parents && (ClassInfo::baseDataClass($type) === 'SiteTree')) {
-                    $hierarchyTypes[] = "{$type} AND (ParentsHierarchy:{$parents}))";
+                if ($parents && (ClassInfo::baseDataClass($type) === 'SilverStripe\CMS\Model\SiteTree')) {
+                    $hierarchyTypes[] = "{$convertedType} AND (ParentsHierarchy:{$parents}))";
                 }
                 // Search against other data objects without parent hierarchy restriction.
                 else {
-                    $hierarchyTypes[] = "{$type})";
+                    $hierarchyTypes[] = "{$convertedType})";
                 }
             }
-            $builder->addFilter('(ClassNameHierarchy', implode(' OR (ClassNameHierarchy:', $hierarchyTypes));
+            $builder->addFilter('ClassNameHierarchy', '(ClassNameHierarchy:' . implode(' OR (ClassNameHierarchy:', $hierarchyTypes));
         }
         if (!$sortBy) {
             $sortBy = 'score';

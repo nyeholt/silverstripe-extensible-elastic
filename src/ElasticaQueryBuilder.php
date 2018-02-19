@@ -160,9 +160,6 @@ class ElasticaQueryBuilder
 
     public function getParams()
     {
-        if (count($this->filters)) {
-            $this->params['fq'] = array_values($this->filters);
-        }
         if ($this->sort) {
             $this->params['sort'] = $this->sort;
         }
@@ -308,87 +305,9 @@ class ElasticaQueryBuilder
         $this->boostFieldValues = $boost;
     }
 
-    public function toVersion1Query()
-    {
-        // Instantiate the boolean query.
-
-        $mm = new Query\MultiMatch();
-        $mm->setQuery($this->userQuery);
-
-        // Determine the field specific boosting to be applied.
-
-        $fields = array();
-        foreach ($this->fields as $field) {
-            if (isset($this->boost[$field])) {
-                $field .= "^{$this->boost[$field]}";
-            }
-            $fields[] = $field;
-        }
-        $mm->setFields($fields);
-        $query = new Query\BoolQuery();
-        $query->addMust($mm);
-
-        // Determine the viewing stage to exclude, as transport routes/stops have no stage.
-
-        $exclude = (Versioned::get_stage() === 'Live') ? 'Stage' : 'Live';
-
-        $query->addMustNot(new Query\QueryString("SS_Stage:{$exclude}"));
-        // Determine the filters to be applied, separating the class hierarchy restriction.
-
-        if (count($this->filters)) {
-            $hierarchy = array_shift($this->filters);
-            $filtering = array();
-            if (count($this->filters)) {
-
-                // Determine the filters to be applied
-                foreach ($this->filters as $filter) {
-                    $filtering[] = "({$filter})";
-                }
-
-                // The class hierarchy restriction should always be applied.
-
-                $string = "({$hierarchy}) AND (".implode(' OR ', $filtering).')';
-            } else {
-                $string = $hierarchy;
-            }
-            $query->addMust(new Query\QueryString($string));
-        }
-
-        // Determine the value specific boosting to be applied, wrapping around the boolean query.
-
-        $boosted = new Query\FunctionScore();
-        $boosted->setQuery($query);
-        foreach ($this->boostFieldValues as $field => $boost) {
-            $q    = new Query\QueryString($field);
-            $full = new Query\Simple(array('query' => $q->toArray()));
-            $boosted->addFunction('boost_factor', (float) $boost, $full);
-        }
-
-        // Instantiate the query object using this boosting wrapper.
-
-        $query = new Query($boosted);
-
-        // Determine the faceting/aggregation.
-
-        foreach ($this->facets['fields'] as $facet => $title) {
-
-            // The second string will be the display title.
-            $aggregation = new Elastica\Aggregation\Terms($facet);
-            $aggregation->setField($facet);
-            $query->addAggregation($aggregation);
-        }
-//        $arr = json_encode($query->toArray());
-        return $query;
-    }
-
     public function toQuery()
     {
-        // if needs be to support AWS functionality
-        if ($this->version < 2) {
-            return $this->toVersion1Query();
-        }
         // Determine the field specific boosting to be applied.
-
         $fields = array();
         foreach ($this->fields as $field) {
             if (isset($this->boost[$field])) {
@@ -409,10 +328,7 @@ class ElasticaQueryBuilder
             $query->addMust($q);
         }
 
-        // Determine the viewing stage to exclude, as transport routes/stops have no stage.
-
         $include = (Versioned::get_stage() === 'Live') ? 'Live' : 'Stage';
-//		$query->addMustNot(new Query\QueryString("SS_Stage:{$exclude}"));
 
         $inclusion = new Query\BoolQuery();
         $inclusion->addMust(new Query\QueryString("SS_Stage:{$include}"));
@@ -422,25 +338,13 @@ class ElasticaQueryBuilder
 
         if (count($this->filters)) {
             $currentFilters = $this->filters;
-            $hierarchy      = array_shift($currentFilters);
-            $filtering      = array();
-            if (count($currentFilters)) {
 
-                // Determine the filters to be applied
-                foreach ($currentFilters as $filter) {
-                    $filtering[] = "({$filter})";
-                }
-
-                // The class hierarchy restriction should always be applied.
-
-                $string = "({$hierarchy}) AND (".implode(' OR ', $filtering).')';
-            } else {
-                $string = $hierarchy;
+            // Determine the filters to be applied
+            foreach ($currentFilters as $filter) {
+                $inclusion = new Query\BoolQuery();
+                $inclusion->addMust(new Query\QueryString($filter));
+                $query->addFilter($inclusion);
             }
-
-            $inclusion = new Query\BoolQuery();
-            $inclusion->addMust(new Query\QueryString($string));
-            $query->addFilter($inclusion);
         }
 
         // Determine the value specific boosting to be applied, wrapping around the boolean query.
@@ -484,15 +388,7 @@ class ElasticaQueryBuilder
      */
     public function addFilter($query, $value = null)
     {
-        if ($query == "(ClassNameHierarchy") {
-            // okay, if we've been given a hack... we'll try and fix it all up again
-            $query = "$query:$value";
-        }
-
-        // hack to handle solr building oddities
-        $query = str_replace('_ms', '', $query);
-
-        $this->filters[$query] = $query;
+        $this->filters[$query] = $value;
         return $this;
     }
 
