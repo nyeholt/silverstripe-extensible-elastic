@@ -206,7 +206,8 @@ class ElasticaSearchEngine extends CustomSearchEngine
         if ($filters = $page->FilterFields->getValues()) {
             if (count($filters)) {
                 foreach ($filters as $filter => $val) {
-                    $builder->addFilter($filter, $val);
+                    $kv = "{$filter}:{$val}";
+                    $builder->addFilter($kv, $kv);
                 }
             }
         }

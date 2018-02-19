@@ -386,9 +386,9 @@ class ElasticaQueryBuilder
      *
      * @param string $query
      */
-    public function addFilter($query, $value = null)
+    public function addFilter($name, $value)
     {
-        $this->filters[$query] = $value;
+        $this->filters[$name] = $value;
         return $this;
     }
 
