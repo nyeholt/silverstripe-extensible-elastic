@@ -219,7 +219,10 @@ class ElasticaSearchEngine extends CustomSearchEngine
         $results = PaginatedList::create($resultSet->toArrayList());
         $results->setPageLength($limit);
         $results->setPageStart($offset);
-        $results->setTotalItems($resultSet->totalItems());
+
+        if (count($resultSet->toArray())) {
+            $results->setTotalItems($resultSet->totalItems());
+        }
 
         $results = ['Results' => $results];
 
