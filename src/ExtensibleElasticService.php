@@ -7,6 +7,8 @@ use Heyday\Elastica\ElasticaService;
 use SilverStripe\Core\Injector\Injector;
 use Symbiote\ElasticSearch\ElasticaQueryBuilder;
 use Psr\Log\LoggerInterface;
+use SilverStripe\Core\ClassInfo;
+use SilverStripe\Core\Extensible;
 
 
 /**
@@ -31,6 +33,25 @@ class ExtensibleElasticService extends ElasticaService {
     public function __construct(Client $client, $index) {
         parent::__construct($client, $index);
         $this->queryBuilders['default'] = ElasticaQueryBuilder::class;
+    }
+
+    /**
+     * Gets the classes which are indexed (i.e. have the extension applied).
+     *
+     * @override due to the logic in the parent impl not being correct around extension inheritance
+     *
+     * @return array
+     */
+    public function getIndexedClasses()
+    {
+        $classes = array();
+        foreach (ClassInfo::subclassesFor('SilverStripe\ORM\DataObject') as $candidate) {
+            $candidateInstance = singleton($candidate);
+            if (Extensible::has_extension($candidate, 'Heyday\\Elastica\\Searchable')) {
+                $classes[] = $candidate;
+            }
+        }
+        return $classes;
     }
 
     /**

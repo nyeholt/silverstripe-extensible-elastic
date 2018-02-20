@@ -7,7 +7,6 @@ use SilverStripe\Control\Director;
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\Core\Extensible;
 use SilverStripe\Dev\BuildTask;
-use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Config\Config;
 
 use Heyday\Elastica\ElasticaService;
@@ -71,7 +70,7 @@ class VersionedReindexTask extends BuildTask
                 // doing this manually because the base module doesn't support versioned directly
                 
 
-                foreach ($this->getIndexedClasses() as $class) {
+                foreach ($this->service->getIndexedClasses() as $class) {
                     Versioned::set_stage('Stage');
                     if (!Config::inst()->get($class, 'supporting_type')) { //Only index types (or classes) that are not just supporting other index types
                         foreach ($class::get() as $record) {
@@ -97,21 +96,4 @@ class VersionedReindexTask extends BuildTask
             }
         }
 	}
-
-        /**
-     * Gets the classes which are indexed (i.e. have the extension applied).
-     *
-     * @return array
-     */
-    public function getIndexedClasses()
-    {
-        $classes = array();
-        foreach (ClassInfo::subclassesFor('SilverStripe\ORM\DataObject') as $candidate) {
-            $candidateInstance = singleton($candidate);
-            if (Extensible::has_extension($candidate, 'Heyday\\Elastica\\Searchable')) {
-                $classes[] = $candidate;
-            }
-        }
-        return $classes;
-    }
 }
