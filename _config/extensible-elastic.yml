@@ -16,6 +16,9 @@ nglasl\extensible\ExtensibleSearchPage:
     - Symbiote\ElasticSearch\ElasticaSearch
 Page:
   indexed_fields: &page_defaults
+    - 
+      ClassName:
+       type: keyword
     - Title
     - Content
     - 

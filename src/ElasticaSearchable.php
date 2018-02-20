@@ -59,8 +59,9 @@ class ElasticaSearchable extends Searchable
         $result = new ArrayObject($result);
 
         $result['ID'] = ['type' => 'long'];
-        $result['ClassName'] = ['type' => 'string'];
-        $result['ClassNameHierarchy'] = ['type' => 'string'];
+        $result['ClassName'] = ['type' => 'keyword'];
+        $result['ClassNameHierarchy'] = ['type' => 'keyword'];
+        $result['SS_Stage'] = ['type' => 'keyword'];
 
         $result['PublicView'] = array('type' => 'boolean');
         if ($this->owner->hasExtension('Hierarchy') || $this->owner->hasField('ParentID')) {
@@ -79,7 +80,7 @@ class ElasticaSearchable extends Searchable
             $result['Content'] = $spec;
         }
         $this->owner->invokeWithExtensions('updateElasticMappings', $result);
-        return $result;
+        return $result->getArrayCopy();
         
     }
 
