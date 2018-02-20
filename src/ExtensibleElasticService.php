@@ -6,7 +6,7 @@ use Elastica\Client;
 use Heyday\Elastica\ElasticaService;
 use SilverStripe\Core\Injector\Injector;
 use Symbiote\ElasticSearch\ElasticaQueryBuilder;
-
+use Psr\Log\LoggerInterface;
 
 
 /**
@@ -20,6 +20,12 @@ class ExtensibleElasticService extends ElasticaService {
 	 * @var map
 	 */
 	protected $queryBuilders = array();
+
+    /**
+     *
+     * @var LoggerInterface
+     */
+    public $logger;
 
     
     public function __construct(Client $client, $index) {
@@ -50,7 +56,7 @@ class ExtensibleElasticService extends ElasticaService {
             $elasticQuery = $query;
         }
         
-        $results = new $resultClass($this->getIndex(), $elasticQuery);
+        $results = Injector::inst()->create($resultClass, $this->getIndex(), $elasticQuery, $this->logger);
 		// The result list needs to be limited so the pagination is looking at the correct page.
 		$results = $results->limit((int)$limit, (int)$offset);
         return $results;
