@@ -367,7 +367,7 @@ class ElasticaQueryBuilder
         foreach ($this->facets['fields'] as $facet => $title) {
 
             // The second string will be the display title.
-            $aggregation = new Elastica\Aggregation\Terms($facet);
+            $aggregation = new \Elastica\Aggregation\Terms($facet);
             $aggregation->setField($facet);
             $query->addAggregation($aggregation);
         }
