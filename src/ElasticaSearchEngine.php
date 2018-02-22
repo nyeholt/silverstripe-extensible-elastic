@@ -10,7 +10,10 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\PaginatedList;
 use SilverStripe\Security\Permission;
-use function singleton;
+use SilverStripe\Control\HTTP;
+use SilverStripe\View\ArrayData;
+
+use Elastica\Query\QueryString;
 
 /**
  * @author marcus
@@ -65,7 +68,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
         $allFields = array();
         foreach ($listType as $classType) {
             if (class_exists($classType)) {
-                $item      = singleton($classType);
+                $item      = \singleton($classType);
                 $fields    = $item->getElasticaFields();
                 $allFields = array_merge($allFields, $fields instanceof ArrayObject ? $fields->getArrayCopy() : $fields);
             }
@@ -95,6 +98,9 @@ class ElasticaSearchEngine extends CustomSearchEngine
             return $this->currentResults;
         }
 
+        $request = $form->getController()->getRequest();
+        $vars = $request->getVars();
+
         $query   = null;
         $builder = $this->searchService->getQueryBuilder($page->QueryType);
         if (isset($data['Search']) && strlen($data['Search'])) {
@@ -111,12 +117,12 @@ class ElasticaSearchEngine extends CustomSearchEngine
             $builder->setFuzziness($page->Fuzziness);
         }
 
-        $sortBy  = isset($data['SortBy']) ? $data['SortBy'] : $page->SortBy;
-        $sortDir = isset($data['SortDirection']) ? $data['SortDirection'] : $page->SortDirection;
+        $sortBy  = isset($vars['SortBy']) ? $vars['SortBy'] : $page->SortBy;
+        $sortDir = isset($vars['SortDirection']) ? $vars['SortDirection'] : $page->SortDirection;
         $types   = $this->searchableTypes($page);
         // allow user to specify specific type
-        if (isset($_GET['SearchType'])) {
-            $fixedType = $_GET['SearchType'];
+        if (isset($vars['SearchType'])) {
+            $fixedType = $vars['SearchType'];
             if (in_array($fixedType, $types)) {
                 $types = array($fixedType);
             }
@@ -133,16 +139,9 @@ class ElasticaSearchEngine extends CustomSearchEngine
         if (!isset($fields[$sortBy])) {
             $sortBy = 'score';
         }
-        $activeFacets = $page->getActiveFacets();
-        if (count($activeFacets)) {
-            foreach ($activeFacets as $facetName => $facetValues) {
-                foreach ($facetValues as $value) {
-                    $builder->addFilter($facetName, $value);
-                }
-            }
-        }
-        $offset = isset($_GET['start']) ? $_GET['start'] : 0;
-        $limit  = isset($_GET['limit']) ? $_GET['limit'] : ($page->ResultsPerPage ? $page->ResultsPerPage : 10);
+        
+        $offset = isset($vars['start']) ? $vars['start'] : 0;
+        $limit  = isset($vars['limit']) ? $vars['limit'] : ($page->ResultsPerPage ? $page->ResultsPerPage : 10);
         // Apply any hierarchy filters.
         if (count($types)) {
             $sortBy         = $this->searchService->getSortFieldName($sortBy, $types);
@@ -161,7 +160,8 @@ class ElasticaSearchEngine extends CustomSearchEngine
                     $hierarchyTypes[] = "{$convertedType})";
                 }
             }
-            $builder->addFilter('ClassNameHierarchy', '(ClassNameHierarchy:' . implode(' OR (ClassNameHierarchy:', $hierarchyTypes));
+            
+            $builder->addFilter('ClassNameHierarchy', new QueryString('(ClassNameHierarchy:' . implode(' OR (ClassNameHierarchy:', $hierarchyTypes)));
         }
         if (!$sortBy) {
             $sortBy = 'score';
@@ -206,8 +206,37 @@ class ElasticaSearchEngine extends CustomSearchEngine
         if ($filters = $page->FilterFields->getValues()) {
             if (count($filters)) {
                 foreach ($filters as $filter => $val) {
-                    $kv = "{$filter}:{$val}";
-                    $builder->addFilter($kv, $kv);
+                    $builder->addFilter($filter, $val);
+                }
+            }
+        }
+
+        // Add in any fields we want to facet by in the response set
+        $fieldFacets = $page->facetFieldMapping();
+        if (count($fieldFacets)) {
+            $builder->addFacetFields($fieldFacets);
+        }
+
+        // and now filter by any applied in the request
+        $aggregation = $request->getVar('aggregation');
+		if($aggregation && is_array($aggregation)) {
+			foreach($aggregation as $field => $value) {
+                if (!isset($fieldFacets[$field])) {
+                    // someone's add a field that shouldn't be filtered on
+                    continue;
+                }
+                $builder->addFilter($field, $value);
+			}
+		}
+
+        if (isset($vars['UserFilter'])) {
+            $filters = $page->UserFilters->getValues();
+            if (count($filters)) {
+                $queries = array_keys($filters);
+                foreach ($vars['UserFilter'] as $index => $junk) {
+                    if (isset($queries[$index])) {
+                        $builder->addFilter($queries[$index]);
+                    }
                 }
             }
         }
@@ -225,6 +254,49 @@ class ElasticaSearchEngine extends CustomSearchEngine
         }
 
         $results = ['Results' => $results];
+
+        // determine if we need to stick aggregation output in place for facets in the result set
+        // The aggregations.
+		$aggregations = ArrayList::create();
+        
+        try {
+            $elasticResults = $resultSet->getResults();
+            
+            unset($vars['url']);
+            unset($vars['start']);
+            unset($vars['aggregation']);
+            $link = $page->Link('getForm');
+            foreach($vars as $var => $value) {
+                $link = HTTP::setGetVar($var, $value, $link);
+            }
+            
+            foreach($elasticResults->getAggregations() as $type => $aggregation) {
+                // The groupings for each aggregation.
+                $buckets = ArrayList::create();
+                if(isset($aggregation['buckets'])) {
+                    foreach($aggregation['buckets'] as $bucket) {
+                        $bucket['type'] = isset($fieldFacets[$type]) ? $fieldFacets[$type] : $type;
+
+                        // Determine the redirect to be used when using the facet/aggregation.
+                        
+                        $bucket['link'] = HTTP::setGetVar('aggregation', array(
+                            $type => $bucket['key']
+                        ), $link);
+
+                        // The information for each aggregation/grouping.
+
+                        $buckets->push(ArrayData::create(
+                            $bucket
+                        ));
+                    }
+                }
+                $aggregations->push($buckets);
+                $results['Aggregations'] = $aggregations;
+            }
+        } catch (Exception $ex) {
+            \SS_Log::log($ex, SS_Log::WARN);
+        }
+
 
         $this->currentResults = $results;
 

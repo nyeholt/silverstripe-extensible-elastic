@@ -179,32 +179,6 @@ class ElasticaQueryBuilder
         return $this->userQuery;
     }
 
-    protected function facetParams()
-    {
-        if (isset($this->facets['fields']) && count($this->facets['fields'])) {
-            $this->params['facet'] = 'true';
-
-            $this->params['facet.field'] = array_values($this->facets['fields']);
-        }
-
-        if (isset($this->facets['queries']) && count($this->facets['queries'])) {
-            $this->params['facet']       = 'true';
-            $this->params['facet.query'] = $this->facets['queries'];
-        }
-
-        if ($this->facetLimit) {
-            $this->params['facet.limit'] = $this->facetLimit;
-        }
-
-        if (count($this->facetFieldLimits)) {
-            foreach ($this->facetFieldLimits as $field => $limit) {
-                $this->params['f.'.$field.'.facet.limit'] = $limit;
-            }
-        }
-
-        $this->params['facet.mincount'] = $this->facetCount ? $this->facetCount : 1;
-    }
-
     public function parse($string)
     {
         // custom search query entered
@@ -330,9 +304,9 @@ class ElasticaQueryBuilder
 
         $include = (Versioned::get_stage() === 'Live') ? 'Live' : 'Stage';
 
-        $inclusion = new Query\BoolQuery();
-        $inclusion->addMust(new Query\QueryString("SS_Stage:{$include}"));
-        $query->addFilter($inclusion);
+        $overallFilter = new Query\BoolQuery();
+        $overallFilter->addMust(new Query\QueryString("SS_Stage:{$include}"));
+        
 
         // Determine the filters to be applied, separating the class hierarchy restriction.
 
@@ -340,10 +314,11 @@ class ElasticaQueryBuilder
             $currentFilters = $this->filters;
 
             // Determine the filters to be applied
-            foreach ($currentFilters as $filter) {
-                $inclusion = new Query\BoolQuery();
-                $inclusion->addMust(new Query\QueryString($filter));
-                $query->addFilter($inclusion);
+            foreach ($currentFilters as $field => $filter) {
+                if (!is_object($filter)) {
+                    $filter = new Query\Term([$field => $filter]);
+                }
+                $overallFilter->addMust($filter);
             }
         }
 
@@ -357,6 +332,8 @@ class ElasticaQueryBuilder
             $boostQ->setBoost((float) $boost);
             $query->addShould($boostQ);
         }
+
+        $query->addFilter($overallFilter);
 
         // Instantiate the query object using this boosting wrapper.
 //

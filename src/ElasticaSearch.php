@@ -222,25 +222,7 @@ class ElasticaSearch extends DataExtension
 
     public function updateQueryBuilder($builder, $page)
     {
-        // This is required to load the faceting/aggregation.
-        $fieldFacets = $page->facetFieldMapping();
-        if (count($fieldFacets)) {
-            $builder->addFacetFields($fieldFacets);
-        }
-
-        if (isset($_GET['UserFilter'])) {
-            $filters = $this->owner->UserFilters->getValues();
-            if (count($filters)) {
-                $queries = array_keys($filters);
-                foreach ($_GET['UserFilter'] as $index => $junk) {
-                    if (isset($queries[$index])) {
-                        $builder->addFilter($queries[$index]);
-                    }
-                }
-            }
-        }
     }
-
 
     /**
      * Gets a list of facet based filters
@@ -248,37 +230,6 @@ class ElasticaSearch extends DataExtension
     public function getActiveFacets()
     {
         return isset($_GET[self::$filter_param]) ? $_GET[self::$filter_param] : array();
-    }
-
-    /**
-     * Retrieve all facets in the result set in a way that can be iterated
-     * over conveniently.
-     *
-     * @return \ArrayList
-     */
-    public function AllFacets()
-    {
-        $engine = '';
-
-        throw new \Exception("Please update ElasticaSearch::AllFacets");
-
-        if (!$this->getResults()) {
-            return new ArrayList(array());
-        }
-        $facets  = $this->getResults()->getFacets();
-        $result  = array();
-        $mapping = $this->facetFieldMapping();
-        if (!is_array($facets)) {
-            return ArrayList::create($result);
-        }
-        foreach ($facets as $title => $items) {
-            $object        = new ViewableData();
-            $object->Items = $this->currentFacets($title);
-            $title         = isset($mapping[$title]) ? $mapping[$title] : $title;
-            $object->Title = DBVarchar::create_field('Varchar', $title);
-            $result[]      = $object;
-        }
-        return new ArrayList($result);
     }
 
     public function fieldsForFacets()
