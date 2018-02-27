@@ -51,9 +51,7 @@ ElasticaSearch:
 
 ```
 
-
-
-Run /dev/tasks/Symbiote-Elastica-ReindexTask
+Run /dev/tasks/Symbiote-ElasticSearch-VersionedReindexTask
 
 
 Note: Reindex will _ONLY_ reindex items that have the Searchable extension applied. There's also
@@ -65,6 +63,13 @@ Name: elastic_data_config
 ---
 SiteTree:
   extensions:
-    - Symbiote\Elastica\Searchable
-    - Symbiote\Elastica\DataDiscovery
+    - Symbiote\ElasticSearch\ElasticaSearchable
+    # not available yet - Symbiote\Elastica\DataDiscovery
 ```
+
+## Details
+
+**Why the separate ElasticaSearchable extension?** 
+
+The base Heyday Elastic module doesn't handle indexing of Versioned content directly; 
+ElasticaSearchable provides a few overrides that take into account versioned content. 

@@ -1,0 +1,26 @@
+---
+Name: extensible-elastic-config
+---
+SilverStripe\Core\Injector\Injector:
+  Symbiote\ElasticSearch\VersionedReindexTask:
+    constructor:
+      - %$Heyday\Elastica\ElasticaService
+  Symbiote\ElasticSearch\ElasticaSearchEngine:
+    properties:
+      searchService: %$Heyday\Elastica\ElasticaService
+  Symbiote\ElasticSearch\ElasticaSearchable:
+    constructor:
+      - %$Heyday\Elastica\ElasticaService
+nglasl\extensible\ExtensibleSearchPage:
+  extensions:
+    - Symbiote\ElasticSearch\ElasticaSearch
+Page:
+  indexed_fields: &page_defaults
+    - 
+      ClassName:
+       type: keyword
+    - Title
+    - Content
+    - 
+      ElementsForSearch:
+        type: string

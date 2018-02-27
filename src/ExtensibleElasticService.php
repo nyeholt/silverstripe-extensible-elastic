@@ -1,11 +1,20 @@
 <?php
 
-use Symbiote\Elastica\ResultList;
+namespace Symbiote\ElasticSearch;
+
+use Elastica\Client;
+use Heyday\Elastica\ElasticaService;
+use SilverStripe\Core\Injector\Injector;
+use Symbiote\ElasticSearch\ElasticaQueryBuilder;
+use Psr\Log\LoggerInterface;
+use SilverStripe\Core\ClassInfo;
+use SilverStripe\Core\Extensible;
+
 
 /**
  * @author marcus
  */
-class ExtensibleElasticService extends Symbiote\Elastica\ElasticaService {
+class ExtensibleElasticService extends ElasticaService {
     
     /**
 	 * A mapping of all the available query builders
@@ -14,20 +23,52 @@ class ExtensibleElasticService extends Symbiote\Elastica\ElasticaService {
 	 */
 	protected $queryBuilders = array();
 
+    /**
+     *
+     * @var LoggerInterface
+     */
+    public $logger;
 
     
-    public function __construct(\Elastica\Client $client, $index) {
+    public function __construct(Client $client, $index) {
         parent::__construct($client, $index);
-        
-        $this->queryBuilders['default'] = 'ElasticaQueryBuilder';
+        $this->queryBuilders['default'] = ElasticaQueryBuilder::class;
     }
 
+    /**
+     * Gets the classes which are indexed (i.e. have the extension applied).
+     *
+     * @override due to the logic in the parent impl not being correct around extension inheritance
+     *
+     * @return array
+     */
+    public function getIndexedClasses()
+    {
+        $classes = array();
+        foreach (ClassInfo::subclassesFor('SilverStripe\ORM\DataObject') as $candidate) {
+            $candidateInstance = singleton($candidate);
+            if (Extensible::has_extension($candidate, 'Heyday\\Elastica\\Searchable')) {
+                $classes[] = $candidate;
+            }
+        }
+        return $classes;
+    }
+
+    /**
+     * Queries the elastic index using an elastic query, mapped as an array
+     *
+     * @param ElasticaQueryBuilder|string $query
+     * @param int $offset
+     * @param int $limit
+     * @param string $resultClass
+     * @return Heyday\Elastica\ResultList
+     */
     public function query($query, $offset = 0, $limit = 20, $resultClass = '') {
         // check for _old_ param structure
         if (!$resultClass ||
             is_array($resultClass) || 
             is_string($resultClass) && !class_exists($resultClass)) {
-            $resultClass = 'Symbiote\Elastica\ResultList';
+            $resultClass = 'Heyday\Elastica\ResultList';
         }
 
         if ($query instanceof ElasticaQueryBuilder) {
@@ -36,10 +77,8 @@ class ExtensibleElasticService extends Symbiote\Elastica\ElasticaService {
             $elasticQuery = $query;
         }
         
-        $results = new $resultClass($this->getIndex(), $elasticQuery);
-
+        $results = Injector::inst()->create($resultClass, $this->getIndex(), $elasticQuery, $this->logger);
 		// The result list needs to be limited so the pagination is looking at the correct page.
-
 		$results = $results->limit((int)$limit, (int)$offset);
         return $results;
         
@@ -62,7 +101,7 @@ class ExtensibleElasticService extends Symbiote\Elastica\ElasticaService {
 	 * Gets the query builder for the given search type
 	 *
 	 * @param string $type 
-	 * @return SolrQueryBuilder
+	 * @return ElasticaQueryBuilder
 	 */
 	public function getQueryBuilder($type='default') {
 		return isset($this->queryBuilders[$type]) ? Injector::inst()->create($this->queryBuilders[$type]) : Injector::inst()->create($this->queryBuilders['default']);
