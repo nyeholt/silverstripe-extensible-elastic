@@ -17,6 +17,8 @@ use SilverStripe\View\ViewableData;
 use SilverStripe\ORM\FieldType\DBVarchar;
 use SilverStripe\View\ArrayData;
 
+use SilverStripe\Forms\CheckboxField;
+
 use SilverStripe\Forms\FieldList;
 
 
@@ -51,6 +53,8 @@ class ElasticaSearch extends DataExtension
         'FilterFields' => 'MultiValueField',
         // filters that users can explicitly choose from
         'UserFilters' => 'MultiValueField',
+
+        'FacetStyle' => 'Varchar',
     );
 
     /**
@@ -126,7 +130,7 @@ class ElasticaSearch extends DataExtension
             new DropdownField('SortBy', _t('ExtensibleSearchPage.SORT_BY', 'Sort By'), $sortFields));
     }
 
-    protected function addFacetFields($fields, $objFields)
+    protected function addFacetFields(FieldList $fields, $objFields)
     {
         $fields->addFieldToTab(
             'Root.Main',
@@ -194,6 +198,9 @@ class ElasticaSearch extends DataExtension
                 _t('ExtensibleSearchPage.CUSTOM_FACET_FIELDS', 'Additional fields to create facets for')), 'Content'
         );
         $kv->setRightTitle('FieldName in left column, display label in the right');
+
+        $opts = ['Dropdown' => 'Dropdown', 'Links' => 'Links'];
+        $fields->insertAfter('CustomFacetFields', DropdownField::create('FacetStyle', _t('ExtensibleSearchPage.FACET_STYLE', 'Facet display'), $opts)->setEmptyString('Manual'));
     }
 
     protected function addBoostFields($fields, $objFields)

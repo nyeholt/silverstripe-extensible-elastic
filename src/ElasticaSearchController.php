@@ -41,6 +41,7 @@ class ElasticaSearchController extends Extension
 
             $form->Fields()->push($cbsf);
         }
+
     }
 
     public function getAggregationFilters()

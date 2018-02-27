@@ -276,7 +276,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
                 if(isset($aggregation['buckets'])) {
                     foreach($aggregation['buckets'] as $bucket) {
                         $bucket['type'] = isset($fieldFacets[$type]) ? $fieldFacets[$type] : $type;
-
+                        $bucket['field'] = $type;
                         // Determine the redirect to be used when using the facet/aggregation.
                         
                         $bucket['link'] = HTTP::setGetVar('aggregation', array(
