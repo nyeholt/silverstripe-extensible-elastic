@@ -225,6 +225,9 @@ class ElasticaSearchEngine extends CustomSearchEngine
                     // someone's add a field that shouldn't be filtered on
                     continue;
                 }
+                if (strlen(trim($value)) === 0) {
+                    continue;
+                }
                 $builder->addFilter($field, $value);
 			}
 		}
@@ -304,6 +307,16 @@ class ElasticaSearchEngine extends CustomSearchEngine
             $o = $resultSet->getQuery()->toArray();
             echo json_encode($o);
         }
+        return $this->currentResults;
+    }
+
+    /**
+     * Retrieves the current set of results, if they've already been
+     * put together by the search form processing. 
+     *
+     * @return array
+     */
+    public function getCurrentResults() {
         return $this->currentResults;
     }
 }

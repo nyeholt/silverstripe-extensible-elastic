@@ -9,6 +9,8 @@ use SilverStripe\Core\Convert;
 use SilverStripe\Forms\CheckboxSetField;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\View\ArrayData;
+
+use SilverStripe\Forms\DropdownField;
 /**
  * 
  *
@@ -42,6 +44,28 @@ class ElasticaSearchController extends Extension
             $form->Fields()->push($cbsf);
         }
 
+        $existingSearch = singleton(ElasticaSearchEngine::class)->getCurrentResults();
+        if ($existingSearch && $page->FacetStyle === 'Dropdown' && isset($existingSearch['Aggregations']) && count($existingSearch['Aggregations'])) {
+            foreach ($existingSearch['Aggregations'] as $facetType) {
+                $currentLabel = null;
+                $filterField = null;
+                $options = [];
+                foreach ($facetType as $facetItem) {
+                    if (!$currentLabel) {
+                        $currentLabel = $facetItem->type;
+                        $filterField = $facetItem->field;
+                    }
+                    $options[$facetItem->key] = $facetItem->key;
+                }
+                if (count($options)) {
+                    $form->Fields()->push(
+                        DropdownField::create("aggregation[$filterField]", $currentLabel, $options)
+                            ->addExtraClass('facet-dropdown')
+                            ->setEmptyString(' ')
+                    );
+                }
+            }
+        }
     }
 
     public function getAggregationFilters()
@@ -60,6 +84,9 @@ class ElasticaSearchController extends Extension
 
             $facets = $this->owner->data()->facetFieldMapping();
             foreach ($aggregation as $type => $filter) {
+                if (!strlen($filter)) {
+                    continue;
+                }
                 $bucket = array(
                     'key' => $filter,
                     'type' => (isset($facets[$type]) ? $facets[$type] : $type)
