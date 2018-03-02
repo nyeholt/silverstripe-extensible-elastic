@@ -292,8 +292,12 @@ class ElasticaQueryBuilder
 
         $query = new Query\BoolQuery();
 
-        if (!$this->allowEmpty || strlen($this->userQuery)) {
-            $q = new Query\QueryString($this->wildcard($this->userQuery));
+        $chars = explode(' ', '+ - && || ! ( ) { } [ ] ^ " ~ * ? : \ /');
+
+        $filteredQuery = str_replace($chars, ' ', $this->userQuery);
+
+        if (!$this->allowEmpty || strlen($filteredQuery)) {
+            $q = new Query\QueryString($this->wildcard($filteredQuery));
             $q->setFields($fields);
 
             if ($this->fuzziness) {
