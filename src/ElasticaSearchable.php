@@ -70,7 +70,8 @@ class ElasticaSearchable extends Searchable
 
         foreach ($result as $field => $spec) {
             if (isset($spec['type']) && ($spec['type'] == 'date') && !isset($spec['format'])) {
-                $spec['format'] = 'yyyy-MM-dd HH:mm:ss';
+                // changed to support date only fields
+                $spec['format'] = 'dateOptionalTime';
                 $result[$field] = $spec;
             }
         }
