@@ -340,8 +340,21 @@ class ElasticaQueryBuilder
         $query->addFilter($overallFilter);
 
         // Instantiate the query object using this boosting wrapper.
-//
         $query = new Query($query);
+
+        if ($this->sort) {
+            list($sortField, $sortOrder) = explode(" ", $this->sort);
+            $sort = [
+                $sortField => [
+                    'order' => $sortOrder,
+//                        'unmapped_type' => 'long',
+                ]
+            ];
+            
+            $query->setSort($sort);
+        }
+
+
 
         // Determine the faceting/aggregation.
 

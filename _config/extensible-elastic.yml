@@ -22,5 +22,8 @@ Page:
     - Title
     - Content
     - 
+      LastEdited:
+        type: date
+    - 
       ElementsForSearch:
         type: text

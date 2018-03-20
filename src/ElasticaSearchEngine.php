@@ -128,7 +128,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
             }
         }
         // (strlen($this->SearchType) ? $this->SearchType : null);
-        $fields = $this->getSelectableFields($page);
+        $fields = $page->getSelectableFields();
         // if we've explicitly set a sort by, then we want to make sure we have a type
         // so we can resolve what the field name in solr is. Otherwise we don't care about type
         // overly much
@@ -166,7 +166,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
         if (!$sortBy) {
             $sortBy = 'score';
         }
-        $sortDir        = in_array($sortDir, array('ASC', 'asc', 'Ascending')) ? 'ASC' : 'DESC';
+        $sortDir        = in_array($sortDir, array('ASC', 'asc', 'Ascending')) ? 'asc' : 'desc';
         $builder->sortBy($sortBy, $sortDir);
         $selectedFields = $page->SearchOnFields->getValues();
         $extraFields    = $page->ExtraSearchFields->getValues();
