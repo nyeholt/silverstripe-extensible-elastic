@@ -140,8 +140,8 @@ class ElasticaSearchEngine extends CustomSearchEngine
             $sortBy = 'score';
         }
         
-        $offset = isset($vars['start']) ? $vars['start'] : 0;
-        $limit  = isset($vars['limit']) ? $vars['limit'] : ($page->ResultsPerPage ? $page->ResultsPerPage : 10);
+        $offset = (int) isset($vars['start']) ? $vars['start'] : 0;
+        $limit  = (int) isset($vars['limit']) ? $vars['limit'] : ($page->ResultsPerPage ? $page->ResultsPerPage : 10);
         // Apply any hierarchy filters.
         if (count($types)) {
             $sortBy         = $this->searchService->getSortFieldName($sortBy, $types);
@@ -248,7 +248,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
         $resultSet = $this->searchService->query($builder, $offset, $limit);
         /* @var $resultSet \Heyday\Elastica\ResultList */
 
-        $results = PaginatedList::create($resultSet->toArrayList());
+        $results = PaginatedList::create($resultSet->toArrayList())->setLimitItems(false);
         $results->setPageLength($limit);
         $results->setPageStart($offset);
 
