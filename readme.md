@@ -64,8 +64,10 @@ Name: elastic_data_config
 SiteTree:
   extensions:
     - Symbiote\ElasticSearch\ElasticaSearchable
-    # not available yet - Symbiote\Elastica\DataDiscovery
+    # for extra boosting options - Symbiote\Elastica\DataDiscovery
 ```
+
+
 
 ## Details
 
