@@ -71,6 +71,19 @@ SiteTree:
 
 ## Details
 
+**How do I use the BoostTerms field?**
+
+BoostTerms are used for subsequent querying, either direct through the builder or by the "Boost values" and
+"Boost fields with field/value matches" options on the Extensible Search Page. 
+
+The field hint states to use the word "important" in this field to boost the record super high in result sets. This
+requires you to set the "Boost fields with field/value matches" to have an entry of
+
+`BoostTerms:important` : `10` 
+
+in the search page to boost records with that set. Additionally, set the "Boost values" for BoostTerms to be higher
+than all other fields for any match to contribute highly. 
+
 **Why the separate ElasticaSearchable extension?** 
 
 The base Heyday Elastic module doesn't handle indexing of Versioned content directly; 
