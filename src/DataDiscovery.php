@@ -2,19 +2,24 @@
 
 namespace Symbiote\ElasticSearch;
 
+use SilverStripe\Core\Extension;
+use SilverStripe\Forms\FieldList;
+use Symbiote\MultiValueField\Fields\MultiValueTextField;
+use SilverStripe\CMS\Model\SiteTree;
+
 /**
  * @author marcus
  */
-class DataDiscovery extends \DataExtension
+class DataDiscovery extends Extension
 {
     //put your code here
     private static $db = [
         'BoostTerms' => 'MultiValueField',
     ];
 
-    public function updateCMSFields(\FieldList $fields)
+    public function updateCMSFields(FieldList $fields)
     {
-        $fields->addFieldsToTab('Root.Tagging', $mvf = \MultiValueTextField::create('BoostTerms', 'Boost for these keywords'));
+        $fields->addFieldsToTab('Root.Tagging', $mvf = MultiValueTextField::create('BoostTerms', 'Boost for these keywords'));
         $mvf->setRightTitle("Enter the word 'important' to boost this item in any search it appears in");
 
     }
@@ -32,7 +37,7 @@ class DataDiscovery extends \DataExtension
         $mappings['Keywords'] = ['type' => 'text'];
         $mappings['Tags'] = ['type' => 'keyword'];
 
-        if ($this->owner instanceof \SiteTree) {
+        if ($this->owner instanceof SiteTree) {
             // store the SS_URL for consistency
             $mappings['SS_URL'] = ['type' => 'text'];
         }
@@ -60,7 +65,7 @@ class DataDiscovery extends \DataExtension
         }
 
 
-        if ($this->owner instanceof \SiteTree) {
+        if ($this->owner instanceof SiteTree) {
             // store the SS_URL for consistency
             $fieldValues['SS_URL'] = $this->owner->RelativeLink();
         }
