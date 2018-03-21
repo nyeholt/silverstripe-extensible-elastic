@@ -31,7 +31,7 @@ class DataDiscovery extends Extension
      */
     public function updateElasticMappings($mappings)
     {
-        $mappings['BoostTerms'] = ['type' => 'keyword'];
+        $mappings['BoostTerms'] = ['type' => 'text'];
 
         $mappings['Categories'] = ['type' => 'keyword'];
         $mappings['Keywords'] = ['type' => 'text'];
@@ -39,35 +39,33 @@ class DataDiscovery extends Extension
 
         if ($this->owner instanceof SiteTree) {
             // store the SS_URL for consistency
-            $mappings['SS_URL'] = ['type' => 'text'];
+            $mappings['SS_URL'] = ['type' => 'keyword'];
         }
     }
 
-    public function updateSearchableData($fieldValues)
+    public function updateElasticDoc($document)
     {
-        $fieldValues['BoostTerms']  = $this->owner->BoostTerms->getValues();
-
+        $document->set('BoostTerms', $this->owner->BoostTerms->getValues());
         // expects taxonomy terms here...
         if ($this->owner->hasMethod('Terms')) {
             $categories = $this->owner->Terms()->column('Name');
 
-            $currentCats = isset($fieldValues['Categories']) ? $fieldValues['Categories'] : [];
+            $currentCats = $document->has('Categories') ? $document->get('Categories') : [];
 
-            $fieldValues['Categories'] = array_merge($currentCats, $categories);
-            $fieldValues['Keywords'] = implode(' ', $categories);
+            $document->set('Categories', array_merge($currentCats, $categories));
+            $document->set('Keywords', implode(' ', $categories));
         }
 
         if ($this->owner->hasMethod('Tags')) {
             $tags = $this->owner->Tags()->column('Title');
-
-            $currentCats = isset($fieldValues['Categories']) ? $fieldValues['Categories'] : [];
-            $fieldValues['Tags'] = array_merge($currentCats, $tags);
+            $currentCats = $document->has('Tags') ? $document->get('Tags') : [];
+            $document->set('Tags', array_merge($currentCats, $tags));
         }
 
 
         if ($this->owner instanceof SiteTree) {
             // store the SS_URL for consistency
-            $fieldValues['SS_URL'] = $this->owner->RelativeLink();
+            $document->set('SS_URL', $this->owner->RelativeLink());
         }
     }
 }
