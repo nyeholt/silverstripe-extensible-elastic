@@ -294,16 +294,31 @@ class ElasticaQueryBuilder
 
         $chars = explode(' ', '+ - && || ! ( ) { } [ ] ^ " ~ * ? : \ /');
 
-        $filteredQuery = str_replace($chars, ' ', $this->userQuery);
+        $userQuery = $this->getUserQuery();
+
+        $filteredQuery = str_replace($chars, ' ', $userQuery);
 
         if (!$this->allowEmpty || strlen($filteredQuery)) {
-            $q = new Query\QueryString($this->wildcard($filteredQuery));
-            $q->setFields($fields);
+            $mq = new Query\MultiMatch();
+            $mq->setQuery($this->wildcard($filteredQuery));
+            $mq->setFields($fields);
+            $mq->setType("phrase_prefix");
+            $query->addMust($mq);
+        }
+
+        // Add Multi Match. Use most_fields to match any field and combines the _score from each field. 
+
+        if(strlen($userQuery)) {
+            $mq2 = new Query\MultiMatch();
+            $mq2->setQuery($userQuery);
+            $mq2->setFields($fields);
+            $mq2->setType("most_fields");
 
             if ($this->fuzziness) {
-                $q->setParam('fuzziness', (int) $this->fuzziness);
+                $mq2->setParam('fuzziness', (int) $this->fuzziness);
             }
-            $query->addMust($q);
+
+            $query->addShould($mq2);
         }
 
         $include = (Versioned::get_stage() === 'Live') ? 'Live' : 'Stage';
