@@ -300,17 +300,15 @@ class ElasticaQueryBuilder
 
         if (!$this->allowEmpty || strlen($filteredQuery)) {
             $mq = new Query\MultiMatch();
-            $mq->setQuery($this->wildcard($filteredQuery));
+            $mq->setQuery($filteredQuery);
             $mq->setFields($fields);
             $mq->setType("phrase_prefix");
+            
             $query->addMust($mq);
-        }
 
-        // Add Multi Match. Use most_fields to match any field and combines the _score from each field. 
-
-        if(strlen($userQuery)) {
+            // Add Multi Match. Use most_fields to match any field and combines the _score from each field. 
             $mq2 = new Query\MultiMatch();
-            $mq2->setQuery($userQuery);
+            $mq2->setQuery($filteredQuery);
             $mq2->setFields($fields);
             $mq2->setType("most_fields");
 
