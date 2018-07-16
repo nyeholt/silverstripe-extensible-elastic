@@ -4,6 +4,7 @@ namespace Symbiote\ElasticSearch;
 
 use Elastica\Client;
 use Heyday\Elastica\ElasticaService;
+use Heyday\Elastica\ResultList;
 use SilverStripe\Core\Injector\Injector;
 use Symbiote\ElasticSearch\ElasticaQueryBuilder;
 use Psr\Log\LoggerInterface;
@@ -15,7 +16,7 @@ use SilverStripe\Core\Extensible;
  * @author marcus
  */
 class ExtensibleElasticService extends ElasticaService {
-    
+
     /**
 	 * A mapping of all the available query builders
 	 *
@@ -29,7 +30,7 @@ class ExtensibleElasticService extends ElasticaService {
      */
     public $logger;
 
-    
+
     public function __construct(Client $client, $index) {
         parent::__construct($client, $index);
         $this->queryBuilders['default'] = ElasticaQueryBuilder::class;
@@ -61,14 +62,14 @@ class ExtensibleElasticService extends ElasticaService {
      * @param int $offset
      * @param int $limit
      * @param string $resultClass
-     * @return Heyday\Elastica\ResultList
+     * @return ResultList
      */
     public function query($query, $offset = 0, $limit = 20, $resultClass = '') {
         // check for _old_ param structure
         if (!$resultClass ||
-            is_array($resultClass) || 
+            is_array($resultClass) ||
             is_string($resultClass) && !class_exists($resultClass)) {
-            $resultClass = 'Heyday\Elastica\ResultList';
+            $resultClass = ResultList::class;
         }
 
         if ($query instanceof ElasticaQueryBuilder) {
@@ -76,18 +77,18 @@ class ExtensibleElasticService extends ElasticaService {
         } else {
             $elasticQuery = $query;
         }
-        
+
         $results = Injector::inst()->create($resultClass, $this->getIndex(), $elasticQuery, $this->logger);
 		// The result list needs to be limited so the pagination is looking at the correct page.
 		$results = $results->limit((int)$limit, (int)$offset);
         return $results;
-        
+
     }
 
     public function isConnected() {
         return true;
     }
-    
+
     /**
 	 * Gets the list of query parsers available
 	 *
@@ -100,13 +101,13 @@ class ExtensibleElasticService extends ElasticaService {
 	/**
 	 * Gets the query builder for the given search type
 	 *
-	 * @param string $type 
+	 * @param string $type
 	 * @return ElasticaQueryBuilder
 	 */
 	public function getQueryBuilder($type='default') {
 		return isset($this->queryBuilders[$type]) ? Injector::inst()->create($this->queryBuilders[$type]) : Injector::inst()->create($this->queryBuilders['default']);
 	}
-    
+
     /////////
     // Solr search compatibility layer
     /////////
@@ -116,13 +117,13 @@ class ExtensibleElasticService extends ElasticaService {
      * @param string $listType
      */
     public function getAllSearchableFieldsFor($listType) {
-        
+
     }
-    
+
     public function getIndexFieldName($field, $classNames = array('Page')) {
 		return $field;
 	}
-    
+
     public function getSortFieldName($sortBy, $types) {
         return $sortBy;
     }
