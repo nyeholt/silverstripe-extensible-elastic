@@ -11,31 +11,35 @@ Add the following to your project's config
 ---
 Name: elastic_config
 ---
-Injector:
+nglasl\extensible\ExtensibleSearchPage:
+  custom_search_engines:
+    Symbiote\ElasticSearch\ElasticaSearchEngine: 'Elastic'
+
+PageController:
+  extensions:
+    - 'nglasl\extensible\ExtensibleSearchExtension'
+    - 'Symbiote\ElasticSearch\ElasticaSearchController'
+
+Page:
+  extensions:
+    - 'Symbiote\ElasticSearch\ElasticaSearchable'
+
+SilverStripe\Core\Injector\Injector:
   ElasticClient:
     class: Elastica\Client
     constructor:
       host_details: 
         host: elastic
         port: 9200
-        # transport: AwsEs - this is needed for AWS search service compatibility; it adds credentials support
-  ElasticaSearch:
+        # transport: AwsAuthV4 - this is needed for AWS search service compatibility; it adds credentials support
+  Symbiote\ElasticSearch\ElasticaSearch:
     properties:
-      searchService: %$ElasticaService
-  ElasticaService:
-    class: ExtensibleElasticService
+      searchService: %$Heyday\Elastica\ElasticaService
+  Heyday\Elastica\ElasticaService:
+    class: Symbiote\ElasticSearch\ExtensibleElasticService
     constructor:
       client: %$ElasticClient
-      index: your_index_name
-
-ExtensibleSearchPage:
-  search_engine_extensions:
-    ElasticaSearch: Elastic Search
-  extensions:
-    - ElasticaSearch
-ExtensibleSearchPage_Controller:
-  extensions:
-    - ElasticaSearch_Controller
+      index: my-index
 
 ```
 
@@ -45,7 +49,7 @@ To add additional types for selection in an extensible search page config; note 
 ---
 Name: search_page_config
 ---
-ElasticaSearch:
+Symbiote\ElasticSearch\ElasticaSearch:
   additional_search_types:
     My_Namespaced_Class: Friendly Label
 
@@ -61,10 +65,10 @@ a DataDiscovery extension that will grab taxonomy terms if available.
 ---
 Name: elastic_data_config
 ---
-SiteTree:
+SilverStripe\CMS\Model\SiteTree:
   extensions:
     - Symbiote\ElasticSearch\ElasticaSearchable
-    # for extra boosting options - Symbiote\Elastica\DataDiscovery
+    # for extra boosting options - Symbiote\ElasticSearch\DataDiscovery
 ```
 
 
