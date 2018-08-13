@@ -12,7 +12,7 @@ use SilverStripe\Core\Config\Config;
 use Heyday\Elastica\ElasticaService;
 
 /**
- * 
+ *
  *
  * @author marcus
  */
@@ -43,9 +43,14 @@ class VersionedReindexTask extends BuildTask
         $message("Specify 'rebuild' to delete the index first, and 'reindex' to re-index content items");
 
         if ($request->getVar('rebuild')) {
-            $this->service->getIndex()->delete();
+            try {
+                $this->service->getIndex()->delete();
+            } catch (\Exception $e) {
+                $message("Index not found to be rebuilt");
+            }
+
         }
-        
+
         $svc = $this->service;
 
         $doIndex = function ($record) use ($svc, $message) {
@@ -68,7 +73,7 @@ class VersionedReindexTask extends BuildTask
             $message('Refreshing the index');
             try {
                 // doing this manually because the base module doesn't support versioned directly
-                
+
 
                 foreach ($this->service->getIndexedClasses() as $class) {
                     Versioned::set_stage('Stage');
