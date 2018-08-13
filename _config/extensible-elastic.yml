@@ -16,14 +16,14 @@ nglasl\extensible\ExtensibleSearchPage:
     - Symbiote\ElasticSearch\ElasticaSearch
 Page:
   indexed_fields: &page_defaults
-    - 
+    -
       ClassName:
-       type: keyword
+        type: keyword
     - Title
     - Content
-    - 
+    -
       LastEdited:
         type: date
-    - 
+    -
       ElementsForSearch:
         type: text
