@@ -327,7 +327,7 @@ class ElasticaQueryBuilder
             $mq->setFields($fields);
             $mq->setType("phrase_prefix");
             
-            $query->addMust($mq);
+            $query->addShould($mq);
 
             // Add Multi Match. Use most_fields to match any field and combines
             // the _score from each field.
