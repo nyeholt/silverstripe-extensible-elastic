@@ -20,13 +20,13 @@ class ElasticaQueryBuilder
     protected $filters   = array();
 
     /**
-     * Should 'emtpy' user queries still generate a result set?
+     * Should 'empty' user queries still generate a result set?
      * @var boolean
      */
     protected $allowEmpty = false;
     /**
-     * 	Allow "alpha only sort" fields to be wrapped in wildcard characters when queried against.
-     * 	@var boolean
+     * Allow "alpha only sort" fields to be wrapped in wildcard characters when queried against.
+     * @var boolean
      */
     protected $enableQueryWildcard = true;
 
@@ -93,13 +93,15 @@ class ElasticaQueryBuilder
         return $this->fields;
     }
 
-    public function setFuzziness($f) {
+    public function setFuzziness($f)
+    {
         $this->fuzziness = $f;
         return $this;
     }
 
-    public function setAllowEmpty($v) {
-        $this->allowEmpty = $v;
+    public function setAllowEmpty($v = false)
+    {
+        $this->allowEmpty = (bool) $v;
         return $this;
     }
 
@@ -134,7 +136,6 @@ class ElasticaQueryBuilder
 
     public function addFacetFields($fields, $limit = 0)
     {
-        $a                      = array_merge($this->facets['fields'], $fields);
         $this->facets['fields'] = array_unique(array_merge($this->facets['fields'], $fields));
         $this->facetLimit       = $limit;
         if ($limit) {
@@ -171,7 +172,7 @@ class ElasticaQueryBuilder
 
     /**
      * Return the base search term
-     * 
+     *
      * @return string
      */
     public function getUserQuery()
@@ -206,10 +207,13 @@ class ElasticaQueryBuilder
     }
 
     /**
-     * 	Wrap wildcard characters around individual terms of an input string, useful when dealing with "alpha only sort" fields.
-     * 	NOTE: The support for custom query syntax of an input string is currently limited to: * () "" OR || AND && NOT ! + -
-     * 	@param string
-     * 	@return string
+     * Wrap wildcard characters around individual terms of an input string,
+     * useful when dealing with "alpha only sort" fields.
+     * NOTE: The support for custom query syntax of an input string is currently
+     * limited to: * () "" OR || AND && NOT ! + -
+     *
+     * @param string
+     * @return string
      */
     public function wildcard($string)
     {
@@ -218,12 +222,14 @@ class ElasticaQueryBuilder
         }
         $wildcard = $this->fuzziness > 0 ? '~' : '*';
 
-        // Appropriately handle the input string if it only consists of a single term, where wildcard characters should not be wrapped around quotations.
+        // Appropriately handle the input string if it only consists of a single
+        // term, where wildcard characters should not be wrapped around
+        // quotations.
 
         $single = (strpos($string, ' ') === false);
         if ($single && (strpos($string, '"') === false)) {
             return "{$string}$wildcard";
-        } else if ($single) {
+        } elseif ($single) {
             return $string;
         }
 
@@ -237,7 +243,8 @@ class ElasticaQueryBuilder
                 if (!strlen($term)) {
                     continue;
                 }
-                // Parse a "search phrase" by storing the current state, where wildcard characters should no longer be wrapped.
+                // Parse a "search phrase" by storing the current state, where
+                // wildcard characters should no longer be wrapped.
 
                 if (($quotations = substr_count($term, '"')) > 0) {
                     if ($quotations === 1) {
@@ -247,25 +254,41 @@ class ElasticaQueryBuilder
                     continue;
                 }
 
-                // Appropriately handle each individual term depending on the "search phrase" state and any custom query syntax.
+                // Appropriately handle each individual term depending on the
+                // "search phrase" state and any custom query syntax.
 
-                if ($quotation || ($term === 'OR') || ($term === '||') || ($term === 'AND') || ($term === '&&') || ($term
-                    === 'NOT') || ($term === '!') || (strpos($term, '+') === 0) || (strpos($term, '-') === 0)) {
+                if ($quotation
+                    || ($term === 'OR')
+                    || ($term === '||')
+                    || ($term === 'AND')
+                    || ($term === '&&')
+                    || ($term === 'NOT')
+                    || ($term === '!')
+                    || (strpos($term, '+') === 0)
+                    || (strpos($term, '-') === 0)
+                ) {
                     $terms[] = $term;
                 } else {
                     $term = "{$term}{$wildcard}";
 
-                    // When dealing with custom grouping, make sure the search terms have been wrapped.
+                    // When dealing with custom grouping, make sure the search
+                    // terms have been wrapped.
 
-                    $term    = str_replace(array(
-                        ')' . $wildcard
-                        ), array(
-                        $wildcard. ')'
-                        ), $term);
+                    $term    = str_replace(
+                        array(
+                            ')' . $wildcard
+                        ),
+                        array(
+                            $wildcard. ')'
+                        ),
+                        $term
+                    );
+
                     $terms[] = $term;
                 }
             }
         }
+
         return implode(' ', $terms);
     }
 
@@ -306,7 +329,8 @@ class ElasticaQueryBuilder
             
             $query->addMust($mq);
 
-            // Add Multi Match. Use most_fields to match any field and combines the _score from each field. 
+            // Add Multi Match. Use most_fields to match any field and combines
+            // the _score from each field.
             $mq2 = new Query\MultiMatch();
             $mq2->setQuery($filteredQuery);
             $mq2->setFields($fields);
@@ -325,7 +349,8 @@ class ElasticaQueryBuilder
         $overallFilter->addMust(new Query\QueryString("SS_Stage:{$include}"));
         
 
-        // Determine the filters to be applied, separating the class hierarchy restriction.
+        // Determine the filters to be applied, separating the class hierarchy
+        // restriction.
 
         if (count($this->filters)) {
             $currentFilters = $this->filters;
@@ -339,12 +364,13 @@ class ElasticaQueryBuilder
             }
         }
 
-        // Determine the value specific boosting to be applied, wrapping around the boolean query.
+        // Determine the value specific boosting to be applied, wrapping around
+        // the boolean query.
 
         foreach ($this->boostFieldValues as $field => $boost) {
             // we use a constant score here because the expectation is that
-            // it's an explicit match, not that the match will be weighted before
-            // being boosted
+            // it's an explicit match, not that the match will be weighted
+            // before being boosted
             $boostQ = new Query\ConstantScore(new Query\QueryString($field));
             $boostQ->setBoost((float) $boost);
             $query->addShould($boostQ);
@@ -372,7 +398,6 @@ class ElasticaQueryBuilder
         // Determine the faceting/aggregation.
 
         foreach ($this->facets['fields'] as $facet => $title) {
-
             // The second string will be the display title.
             $aggregation = new \Elastica\Aggregation\Terms($facet);
             $aggregation->setField($facet);
@@ -380,7 +405,6 @@ class ElasticaQueryBuilder
         }
 
 //        $o = $query->toArray();
-//
 //        $p = json_encode($o);
 
         return $query;
@@ -389,7 +413,8 @@ class ElasticaQueryBuilder
     /**
      * Add a filter query clause.
      *
-     * Filter queries simply restrict the result set without affecting the score of results
+     * Filter queries simply restrict the result set without affecting the score
+     * of results
      *
      * @param string $query
      */
@@ -417,8 +442,7 @@ class ElasticaQueryBuilder
     /**
      * Apply a geo field restriction around a particular point
      *
-     * @param string $point
-     * 					The point in "lat,lon" format
+     * @param string $point The point in "lat,lon" format
      * @param string $field
      * @param float $radius
      */
