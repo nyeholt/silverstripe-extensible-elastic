@@ -14,8 +14,8 @@ SilverStripe\Core\Injector\Injector:
 nglasl\extensible\ExtensibleSearchPage:
   extensions:
     - Symbiote\ElasticSearch\ElasticaSearch
-Page:
-  indexed_fields: &page_defaults
+SilverStripe\ORM\DataObject:
+  indexed_fields:
     -
       ClassName:
         type: keyword
@@ -24,6 +24,7 @@ Page:
     -
       LastEdited:
         type: date
+        format: dateOptionalTime
     -
       ElementsForSearch:
         type: text
