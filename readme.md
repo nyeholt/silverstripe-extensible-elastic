@@ -43,7 +43,7 @@ SilverStripe\Core\Injector\Injector:
 
 ```
 
-To add additional types for selection in an extensible search page config; note namespace slashes become underscores
+To add additional types for selection in an extensible search page config; note namespaces are supported.
 
 ```
 ---
@@ -51,7 +51,7 @@ Name: search_page_config
 ---
 Symbiote\ElasticSearch\ElasticaSearch:
   additional_search_types:
-    My_Namespaced_Class: Friendly Label
+    My\Namespaced\Class: Friendly Label
 
 ```
 
