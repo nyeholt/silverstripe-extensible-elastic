@@ -137,6 +137,14 @@ class ElasticaSearch extends DataExtension
             $kv = new KeyValueField('FilterFields', _t('ExtensibleSearchPage.FILTER_FIELDS', 'Fields to filter by')),
             'Content'
         );
+        $kv->setRightTitle("FieldName in the left column, value in the right. This will be applied before the search is executed");
+
+        $fields->addFieldToTab(
+            'Root.Main',
+            $kv = KeyValueField::create('UserFilters',
+                _t('ExtensibleSearchPage.USER_FILTER_FIELDS', 'User selectable filters')), 'Content'
+        );
+        $kv->setRightTitle('Field match (FieldName:Value) on the left, label displayed on right. These are shown on the search form.');
 
         $fields->addFieldToTab('Root.Main',
             new HeaderField('FacetHeader', _t('ExtensibleSearchPage.FACET_HEADER', 'Facet Settings')), 'Content');
@@ -168,8 +176,10 @@ class ElasticaSearch extends DataExtension
 
         $fields->addFieldToTab(
             'Root.Main',
-            new KeyValueField('FacetQueries',
-            _t('ExtensibleSearchPage.FACET_QUERIES', 'Fields to create query facets for')), 'Content'
+            KeyValueField::create('FacetQueries',
+                _t('ExtensibleSearchPage.FACET_QUERIES', 'Fields to create query facets for')
+            )->setRightTitle("Enter an elastic query, then the field name"),
+            'Content'
         );
 
         $fields->addFieldToTab('Root.Main',
@@ -185,12 +195,6 @@ class ElasticaSearch extends DataExtension
         );
         $kv->setRightTitle('FieldName in left column, display label in the right');
 
-        $fields->addFieldToTab(
-            'Root.Main',
-            $kv = KeyValueField::create('UserFilters',
-                _t('ExtensibleSearchPage.USER_FILTER_FIELDS', 'User selectable filters')), 'Content'
-        );
-        $kv->setRightTitle('Filter query on the left, label displayed on right');
 
         $fields->addFieldToTab(
             'Root.Main',
@@ -198,6 +202,8 @@ class ElasticaSearch extends DataExtension
                 _t('ExtensibleSearchPage.CUSTOM_FACET_FIELDS', 'Additional fields to create facets for')), 'Content'
         );
         $kv->setRightTitle('FieldName in left column, display label in the right');
+
+
 
         $opts = ['Dropdown' => 'Dropdown', 'Links' => 'Links'];
         $fields->insertAfter('CustomFacetFields', DropdownField::create('FacetStyle', _t('ExtensibleSearchPage.FACET_STYLE', 'Facet display'), $opts)->setEmptyString('Manual'));
