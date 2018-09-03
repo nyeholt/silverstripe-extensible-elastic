@@ -11,7 +11,7 @@ use SilverStripe\Versioned\Versioned;
 /**
  * Adds additional indexing fields to support broader search usage
  *
- * Ensures that Versioned content is indexed in an appropriate stage. 
+ * Ensures that Versioned content is indexed in an appropriate stage.
  *
  * @author marcus
  */
@@ -82,7 +82,7 @@ class ElasticaSearchable extends Searchable
         }
         $this->owner->invokeWithExtensions('updateElasticMappings', $result);
         return $result->getArrayCopy();
-        
+
     }
 
     public function getElasticaDocument() {
@@ -93,13 +93,13 @@ class ElasticaSearchable extends Searchable
         // is versioned, or has VersionedDataObject extension
         if ($this->owner->hasExtension(Versioned::class) || $this->owner->hasMethod('getCMSPublishedState')) {
             // add in the specific stage(s)
-            $stage = $this->liveIndex ? 'Live' : 'Stage'; 
+            $stage = $this->liveIndex ? 'Live' : 'Stage';
             $indexedInStage = [$stage];
         } else {
             $indexedInStage = array('Live', 'Stage');
         }
         $document->set('SS_Stage', $indexedInStage);
-        
+
         $document->set('PublicView', $this->owner->canView(Member::create()));
 
         if ($this->owner->hasExtension('Hierarchy') || $this->owner->hasField('ParentID')) {

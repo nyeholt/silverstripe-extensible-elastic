@@ -14,6 +14,8 @@ use SilverStripe\Control\HTTP;
 use SilverStripe\View\ArrayData;
 
 use Elastica\Query\QueryString;
+use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Control\Director;
 
 /**
  * @author marcus
@@ -28,7 +30,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
 
     /**
      * Current result set
-     * 
+     *
      * @var ArrayList
      */
     protected $currentResults;
@@ -53,7 +55,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
      */
     public $logger;
 
-    
+
     public function setElasticaSearchService($v)
     {
         if ($v instanceof ExtensibleElasticService) {
@@ -130,16 +132,16 @@ class ElasticaSearchEngine extends CustomSearchEngine
         // (strlen($this->SearchType) ? $this->SearchType : null);
         $fields = $page->getSelectableFields();
         // if we've explicitly set a sort by, then we want to make sure we have a type
-        // so we can resolve what the field name in solr is. Otherwise we don't care about type
+        // so we can resolve what the field name in elastic. Otherwise we don't care about type
         // overly much
         if (!count($types) && $sortBy) {
             // default to page
-            $types = Config::inst()->get(__CLASS__, 'default_searchable_types');
+            $types = Config::inst()->get(ElasticaSearch::class, 'additional_search_types');
         }
         if (!isset($fields[$sortBy])) {
             $sortBy = 'score';
         }
-        
+
         $offset = (int) isset($vars['start']) ? $vars['start'] : 0;
         $limit  = (int) isset($vars['limit']) ? $vars['limit'] : ($page->ResultsPerPage ? $page->ResultsPerPage : 10);
         // Apply any hierarchy filters.
@@ -150,9 +152,13 @@ class ElasticaSearchEngine extends CustomSearchEngine
                     $page->SearchTrees()->column('ID')) : null;
 
             foreach ($types as $type) {
+                // BC support for change in 2.3.0 where all types were handled as PHP classes,
+                // only being swapped when storing in the index
+                $bcType = str_replace('_', "\\", $type);
+                // and converted to be compatible to ElasticaSearchable::getElasticaType
                 $convertedType = str_replace('\\', "_", $type);
                 // Search against site tree elements with parent hierarchy restriction.
-                if ($parents && (ClassInfo::baseDataClass($type) === 'SilverStripe\CMS\Model\SiteTree')) {
+                if ($parents && (ClassInfo::baseDataClass($bcType) === SiteTree::class)) {
                     $hierarchyTypes[] = "{$convertedType} AND (ParentsHierarchy:{$parents}))";
                 }
                 // Search against other data objects without parent hierarchy restriction.
@@ -160,7 +166,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
                     $hierarchyTypes[] = "{$convertedType})";
                 }
             }
-            
+
             $builder->addFilter('ClassNameHierarchy', new QueryString('(ClassNameHierarchy:' . implode(' OR (ClassNameHierarchy:', $hierarchyTypes)));
         }
         if (!$sortBy) {
@@ -261,10 +267,14 @@ class ElasticaSearchEngine extends CustomSearchEngine
         // determine if we need to stick aggregation output in place for facets in the result set
         // The aggregations.
 		$aggregations = ArrayList::create();
-        
+
         try {
             $elasticResults = $resultSet->getResults();
-            
+
+            if (!$elasticResults) {
+                throw new \RuntimeException("Could not retrieve results from elastic");
+            }
+
             unset($vars['url']);
             unset($vars['start']);
             unset($vars['aggregation']);
@@ -272,7 +282,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
             foreach($vars as $var => $value) {
                 $link = HTTP::setGetVar($var, $value, $link);
             }
-            
+
             foreach($elasticResults->getAggregations() as $type => $aggregation) {
                 // The groupings for each aggregation.
                 $buckets = ArrayList::create();
@@ -281,7 +291,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
                         $bucket['type'] = isset($fieldFacets[$type]) ? $fieldFacets[$type] : $type;
                         $bucket['field'] = $type;
                         // Determine the redirect to be used when using the facet/aggregation.
-                        
+
                         $bucket['link'] = HTTP::setGetVar('aggregation', array(
                             $type => $bucket['key']
                         ), $link);
@@ -298,6 +308,9 @@ class ElasticaSearchEngine extends CustomSearchEngine
             }
         } catch (Exception $ex) {
             \SS_Log::log($ex, SS_Log::WARN);
+            if (Director::isDev()) {
+                throw $ex;
+            }
         }
 
 
@@ -312,7 +325,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
 
     /**
      * Retrieves the current set of results, if they've already been
-     * put together by the search form processing. 
+     * put together by the search form processing.
      *
      * @return array
      */
