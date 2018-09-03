@@ -44,13 +44,6 @@ class ElasticaSearchable extends Searchable
         $this->reIndex('Live');
     }
 
-	/**
-	 * @return string
-	 */
-	public function getElasticaType($input = null) {
-		return str_replace('\\', '_', $input ? $input : $this->owner->baseClass());
-	}
-
     public function getElasticaFields() {
         $result = parent::getElasticaFields();
 
@@ -80,6 +73,7 @@ class ElasticaSearchable extends Searchable
             $spec['store'] = false;
             $result['Content'] = $spec;
         }
+
         $this->owner->invokeWithExtensions('updateElasticMappings', $result);
         return $result->getArrayCopy();
 
@@ -113,8 +107,9 @@ class ElasticaSearchable extends Searchable
             }
             $self = $this;
             $classes = array_map(function ($item) use ($self) {
-                return $self->getElasticaType($item);
+                return str_replace('\\', '_', $item);
             }, $classes);
+
             $document->set('ClassNameHierarchy', $classes);
         }
 

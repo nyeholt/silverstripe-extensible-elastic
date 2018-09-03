@@ -152,13 +152,9 @@ class ElasticaSearchEngine extends CustomSearchEngine
                     $page->SearchTrees()->column('ID')) : null;
 
             foreach ($types as $type) {
-                // BC support for change in 2.3.0 where all types were handled as PHP classes,
-                // only being swapped when storing in the index
-                $bcType = str_replace('_', "\\", $type);
-                // and converted to be compatible to ElasticaSearchable::getElasticaType
                 $convertedType = str_replace('\\', "_", $type);
                 // Search against site tree elements with parent hierarchy restriction.
-                if ($parents && (ClassInfo::baseDataClass($bcType) === SiteTree::class)) {
+                if ($parents && (ClassInfo::baseDataClass($type) === SiteTree::class)) {
                     $hierarchyTypes[] = "{$convertedType} AND (ParentsHierarchy:{$parents}))";
                 }
                 // Search against other data objects without parent hierarchy restriction.
