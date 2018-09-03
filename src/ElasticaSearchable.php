@@ -53,7 +53,10 @@ class ElasticaSearchable extends Searchable
 
         $result['ID'] = ['type' => 'long'];
         $result['ClassName'] = ['type' => 'keyword'];
-        $result['ClassNameHierarchy'] = ['type' => 'keyword'];
+        $result['ClassNameHierarchy'] = [
+            'type' => 'keyword',
+            'store' => true,
+        ];
         $result['SS_Stage'] = ['type' => 'keyword'];
 
         $result['PublicView'] = array('type' => 'boolean');

@@ -28,3 +28,4 @@ SilverStripe\ORM\DataObject:
     -
       ElementsForSearch:
         type: text
+        store: false
