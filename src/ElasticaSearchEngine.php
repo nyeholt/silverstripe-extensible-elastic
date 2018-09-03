@@ -240,7 +240,8 @@ class ElasticaSearchEngine extends CustomSearchEngine
                 $queries = array_keys($filters);
                 foreach ($vars['UserFilter'] as $index => $junk) {
                     if (isset($queries[$index])) {
-                        $builder->addFilter($queries[$index]);
+                        $fv = explode(':', $queries[$index]);
+                        $builder->addFilter($fv[0], $fv[1]);
                     }
                 }
             }
