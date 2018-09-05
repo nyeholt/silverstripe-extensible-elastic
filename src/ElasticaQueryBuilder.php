@@ -18,6 +18,7 @@ class ElasticaQueryBuilder
     protected $and       = array();
     protected $params    = array();
     protected $filters   = array();
+    protected $postFilters = array();
 
     /**
      * Should 'emtpy' user queries still generate a result set?
@@ -171,7 +172,7 @@ class ElasticaQueryBuilder
 
     /**
      * Return the base search term
-     * 
+     *
      * @return string
      */
     public function getUserQuery()
@@ -368,6 +369,20 @@ class ElasticaQueryBuilder
         // Instantiate the query object using this boosting wrapper.
         $query = new Query($query);
 
+        // add in any postquery filtering
+        if (count($this->postFilters) > 0) {
+            $postFilter = new Query\BoolQuery();
+            // Determine the filters to be applied
+            foreach ($this->postFilters as $field => $filter) {
+                if (!is_object($filter)) {
+                    $filter = new Query\Term([$field => $filter]);
+                }
+                $postFilter->addMust($filter);
+            }
+            $query->setPostFilter($postFilter);
+        }
+
+
         if ($this->sort) {
             list($sortField, $sortOrder) = explode(" ", $this->sort);
             $sort = [
@@ -376,7 +391,7 @@ class ElasticaQueryBuilder
 //                        'unmapped_type' => 'long',
                 ]
             ];
-            
+
             $query->setSort($sort);
         }
 
@@ -413,6 +428,16 @@ class ElasticaQueryBuilder
     }
 
     /**
+     * Add a post-query filter
+     *
+     * Post filters are applied _after_ things like aggregations are
+     * calculated
+     */
+    public function addPostFilter($name, $value) {
+        $this->postFilters[$name] = $value;
+    }
+
+    /**
      * Remove a filter in place on this query
      *
      * @param string $query
@@ -424,6 +449,7 @@ class ElasticaQueryBuilder
             $query = "$query:$value";
         }
         unset($this->filters[$query]);
+        unset($this->postFilters[$query]);
         return $this;
     }
 

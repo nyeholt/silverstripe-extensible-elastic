@@ -16,6 +16,9 @@ use SilverStripe\View\ArrayData;
 use Elastica\Query\QueryString;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Director;
+use Elastica\Query\BoolQuery;
+use Elastica\Query\Term;
+use SilverStripe\ORM\FieldType\DBVarchar;
 
 /**
  * @author marcus
@@ -70,8 +73,8 @@ class ElasticaSearchEngine extends CustomSearchEngine
         $allFields = array();
         foreach ($listType as $classType) {
             if (class_exists($classType)) {
-                $item      = \singleton($classType);
-                $fields    = $item->getElasticaFields();
+                $item = \singleton($classType);
+                $fields = $item->getElasticaFields();
                 $allFields = array_merge($allFields, $fields instanceof ArrayObject ? $fields->getArrayCopy() : $fields);
             }
         }
@@ -103,7 +106,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
         $request = $form->getController()->getRequest();
         $vars = $request->getVars();
 
-        $query   = null;
+        $query = null;
         $builder = $this->searchService->getQueryBuilder($page->QueryType);
         if (isset($data['Search']) && strlen($data['Search'])) {
             $query = $data['Search'];
@@ -119,9 +122,9 @@ class ElasticaSearchEngine extends CustomSearchEngine
             $builder->setFuzziness($page->Fuzziness);
         }
 
-        $sortBy  = isset($vars['SortBy']) ? $vars['SortBy'] : $page->SortBy;
+        $sortBy = isset($vars['SortBy']) ? $vars['SortBy'] : $page->SortBy;
         $sortDir = isset($vars['SortDirection']) ? $vars['SortDirection'] : $page->SortDirection;
-        $types   = $this->searchableTypes($page);
+        $types = $this->searchableTypes($page);
         // allow user to specify specific type
         if (isset($vars['SearchType'])) {
             $fixedType = $vars['SearchType'];
@@ -142,14 +145,16 @@ class ElasticaSearchEngine extends CustomSearchEngine
             $sortBy = 'score';
         }
 
-        $offset = (int) isset($vars['start']) ? $vars['start'] : 0;
-        $limit  = (int) isset($vars['limit']) ? $vars['limit'] : ($page->ResultsPerPage ? $page->ResultsPerPage : 10);
+        $offset = (int)isset($vars['start']) ? $vars['start'] : 0;
+        $limit = (int)isset($vars['limit']) ? $vars['limit'] : ($page->ResultsPerPage ? $page->ResultsPerPage : 10);
         // Apply any hierarchy filters.
         if (count($types)) {
-            $sortBy         = $this->searchService->getSortFieldName($sortBy, $types);
+            $sortBy = $this->searchService->getSortFieldName($sortBy, $types);
             $hierarchyTypes = array();
-            $parents        = $page->SearchTrees()->count() ? implode(' OR ParentsHierarchy:',
-                    $page->SearchTrees()->column('ID')) : null;
+            $parents = $page->SearchTrees()->count() ? implode(
+                ' OR ParentsHierarchy:',
+                $page->SearchTrees()->column('ID')
+            ) : null;
 
             foreach ($types as $type) {
                 $convertedType = str_replace('\\', "_", $type);
@@ -168,10 +173,10 @@ class ElasticaSearchEngine extends CustomSearchEngine
         if (!$sortBy) {
             $sortBy = 'score';
         }
-        $sortDir        = in_array($sortDir, array('ASC', 'asc', 'Ascending')) ? 'asc' : 'desc';
+        $sortDir = in_array($sortDir, array('ASC', 'asc', 'Ascending')) ? 'asc' : 'desc';
         $builder->sortBy($sortBy, $sortDir);
         $selectedFields = $page->SearchOnFields->getValues();
-        $extraFields    = $page->ExtraSearchFields->getValues();
+        $extraFields = $page->ExtraSearchFields->getValues();
 
         // the following serves two purposes; filter out the searched on fields to only those that
         // are in the actually  searched on types, and to map them to relevant solr types
@@ -221,18 +226,28 @@ class ElasticaSearchEngine extends CustomSearchEngine
 
         // and now filter by any applied in the request
         $aggregation = $request->getVar('aggregation');
-		if($aggregation && is_array($aggregation)) {
-			foreach($aggregation as $field => $value) {
+        $filterMethod = $page->MinFacetCount > 0 ? 'addFilter' : 'addPostFilter';
+        if ($aggregation && is_array($aggregation)) {
+            foreach ($aggregation as $field => $value) {
                 if (!isset($fieldFacets[$field])) {
                     // someone's add a field that shouldn't be filtered on
                     continue;
                 }
-                if (strlen(trim($value)) === 0) {
+                if (!$value) {
                     continue;
                 }
-                $builder->addFilter($field, $value);
-			}
-		}
+                if (is_array($value)) {
+                    $orFilter = new BoolQuery();
+                    foreach ($value as $filterValue) {
+                        $filter = new Term([$field => $filterValue]);
+                        $orFilter->addShould($filter);
+                    }
+                    $builder->$filterMethod($field, $orFilter);
+                } else {
+                    $builder->$filterMethod($field, $value);
+                }
+            }
+        }
 
         if (isset($vars['UserFilter'])) {
             $filters = $page->UserFilters->getValues();
@@ -259,11 +274,16 @@ class ElasticaSearchEngine extends CustomSearchEngine
             $results->setTotalItems($resultSet->totalItems());
         }
 
-        $results = ['Results' => $results];
+        $time = $resultSet->getResults()->getTotalTime();
+        $results = [
+            'Results' => $results,
+            'TimeTaken' => $time,
+            'Query' => DBVarchar::create_field('Varchar', $query)
+        ];
 
         // determine if we need to stick aggregation output in place for facets in the result set
         // The aggregations.
-		$aggregations = ArrayList::create();
+        $aggregations = ArrayList::create();
 
         try {
             $elasticResults = $resultSet->getResults();
@@ -276,15 +296,15 @@ class ElasticaSearchEngine extends CustomSearchEngine
             unset($vars['start']);
             unset($vars['aggregation']);
             $link = $page->Link('getForm');
-            foreach($vars as $var => $value) {
+            foreach ($vars as $var => $value) {
                 $link = HTTP::setGetVar($var, $value, $link);
             }
 
-            foreach($elasticResults->getAggregations() as $type => $aggregation) {
+            foreach ($elasticResults->getAggregations() as $type => $aggregation) {
                 // The groupings for each aggregation.
                 $buckets = ArrayList::create();
-                if(isset($aggregation['buckets'])) {
-                    foreach($aggregation['buckets'] as $bucket) {
+                if (isset($aggregation['buckets'])) {
+                    foreach ($aggregation['buckets'] as $bucket) {
                         $bucket['type'] = isset($fieldFacets[$type]) ? $fieldFacets[$type] : $type;
                         $bucket['field'] = $type;
                         // Determine the redirect to be used when using the facet/aggregation.
@@ -326,7 +346,8 @@ class ElasticaSearchEngine extends CustomSearchEngine
      *
      * @return array
      */
-    public function getCurrentResults() {
+    public function getCurrentResults()
+    {
         return $this->currentResults;
     }
 }

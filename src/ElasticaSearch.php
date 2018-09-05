@@ -57,6 +57,12 @@ class ElasticaSearch extends DataExtension
         'FacetStyle' => 'Varchar',
     );
 
+    private static $facet_styles = [
+        'Dropdown' => 'Dropdown',
+        'Links' => 'Links',
+        'Checkbox'  => 'Checkbox',
+    ];
+
     /**
      *
      * @var \Symbiote\ElasticSearcha\ExtensibleElasticService
@@ -183,10 +189,11 @@ class ElasticaSearch extends DataExtension
         );
 
         $fields->addFieldToTab('Root.Main',
-            new NumericField('MinFacetCount',
+            $mfc = NumericField::create('MinFacetCount',
             _t('ExtensibleSearchPage.MIN_FACET_COUNT', 'Minimum facet count for inclusion in facet results'), 2),
             'Content'
         );
+        $mfc->setRightTitle('If set to 0, all facets will be returned regardless of applied filters');
 
         $fields->addFieldToTab(
             'Root.Main',
@@ -203,9 +210,7 @@ class ElasticaSearch extends DataExtension
         );
         $kv->setRightTitle('FieldName in left column, display label in the right');
 
-
-
-        $opts = ['Dropdown' => 'Dropdown', 'Links' => 'Links'];
+        $opts = Config::inst()->get(self::class, 'facet_styles');
         $fields->insertAfter('CustomFacetFields', DropdownField::create('FacetStyle', _t('ExtensibleSearchPage.FACET_STYLE', 'Facet display'), $opts)->setEmptyString('Manual'));
     }
 

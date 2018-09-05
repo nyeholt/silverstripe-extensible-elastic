@@ -12,7 +12,7 @@ use SilverStripe\View\ArrayData;
 
 use SilverStripe\Forms\DropdownField;
 /**
- * 
+ *
  *
  * @author marcus
  */
@@ -45,7 +45,15 @@ class ElasticaSearchController extends Extension
         }
 
         $existingSearch = singleton(ElasticaSearchEngine::class)->getCurrentResults();
-        if ($existingSearch && $page->FacetStyle === 'Dropdown' && isset($existingSearch['Aggregations']) && count($existingSearch['Aggregations'])) {
+        if (
+            $existingSearch &&
+            isset($existingSearch['Aggregations']) &&
+            count($existingSearch['Aggregations'])
+        ) {
+
+            $request = $this->owner->getRequest();
+            $aggregation  = $request->getVar('aggregation');
+
             foreach ($existingSearch['Aggregations'] as $facetType) {
                 $currentLabel = null;
                 $filterField = null;
@@ -58,11 +66,22 @@ class ElasticaSearchController extends Extension
                     $options[$facetItem->key] = $facetItem->key;
                 }
                 if (count($options)) {
-                    $form->Fields()->push(
-                        DropdownField::create("aggregation[$filterField]", $currentLabel, $options)
-                            ->addExtraClass('facet-dropdown')
-                            ->setEmptyString(' ')
-                    );
+                    $fieldName = "aggregation[$filterField]";
+                    $values = isset($aggregation[$filterField]) ? $aggregation[$filterField] : [];
+                    if ($page->FacetStyle === 'Dropdown') {
+                        $form->Fields()->push(
+                            DropdownField::create("", $currentLabel, $options)
+                                ->addExtraClass('facet-dropdown')
+                                ->setEmptyString(' ')
+                                ->setValue($values)
+                        );
+                    } else if ($page->FacetStyle === 'Checkbox') {
+                        $form->Fields()->push(
+                            CheckboxSetField::create("aggregation[$filterField]", $currentLabel, $options)
+                                ->addExtraClass('facet-checkbox')
+                                ->setValue($values)
+                        );
+                    }
                 }
             }
         }
@@ -84,11 +103,11 @@ class ElasticaSearchController extends Extension
 
             $facets = $this->owner->data()->facetFieldMapping();
             foreach ($aggregation as $type => $filter) {
-                if (!strlen($filter)) {
+                if (!$filter) {
                     continue;
                 }
                 $bucket = array(
-                    'key' => $filter,
+                    'key' => is_array($filter) ? implode(', ', $filter) : $filter,
                     'type' => (isset($facets[$type]) ? $facets[$type] : $type)
                 );
 
