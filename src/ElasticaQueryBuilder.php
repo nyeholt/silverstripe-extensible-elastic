@@ -299,31 +299,44 @@ class ElasticaQueryBuilder
         $filteredQuery = str_replace($chars, ' ', $userQuery);
 
         if (!$this->allowEmpty || strlen($filteredQuery)) {
+            // okay, let's add our various matching bits that are needed
+            $subquery = new Query\BoolQuery();
+
+            // Partial match on the entered term
             $mq = new Query\MultiMatch();
             $mq->setQuery($filteredQuery);
             $mq->setFields($fields);
             $mq->setType("phrase_prefix");
-            
-            $query->addMust($mq);
+            $subquery->addShould($mq);
 
-            // Add Multi Match. Use most_fields to match any field and combines the _score from each field. 
+            // Mostfields match to cover how frequently it exists. Use most_fields to match any field and combines the _score from each field.
             $mq2 = new Query\MultiMatch();
             $mq2->setQuery($filteredQuery);
             $mq2->setFields($fields);
             $mq2->setType("most_fields");
-
             if ($this->fuzziness) {
                 $mq2->setParam('fuzziness', (int) $this->fuzziness);
             }
+            $subquery->addShould($mq2);
 
-            $query->addShould($mq2);
+            // and now one with a keyword analyzer to do exact matching of the input text
+            $mq3 = new Query\MultiMatch();
+            $mq3->setQuery($filteredQuery);
+            $mq3->setFields($fields);
+            $mq3->setType("most_fields");
+            $mq3->setAnalyzer('keyword');
+            $mq3->setParam('boost', '3');
+            // $mq3->
+            $subquery->addShould($mq3);
+
+            $query->addMust($subquery);
         }
 
         $include = (Versioned::get_stage() === 'Live') ? 'Live' : 'Stage';
 
         $overallFilter = new Query\BoolQuery();
         $overallFilter->addMust(new Query\QueryString("SS_Stage:{$include}"));
-        
+
 
         // Determine the filters to be applied, separating the class hierarchy restriction.
 
