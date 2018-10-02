@@ -284,7 +284,10 @@ class ElasticaQueryBuilder
     {
         // Determine the field specific boosting to be applied.
         $fields = array();
+        $unboostedFields = array();
+
         foreach ($this->fields as $field) {
+            $unboostedFields[] = $field;
             if (isset($this->boost[$field])) {
                 $field .= "^{$this->boost[$field]}";
             }
@@ -306,14 +309,14 @@ class ElasticaQueryBuilder
             // Partial match on the entered term
             $mq = new Query\MultiMatch();
             $mq->setQuery($filteredQuery);
-            $mq->setFields($fields);
+            $mq->setFields($unboostedFields);
             $mq->setType("phrase_prefix");
             $subquery->addShould($mq);
 
             // Mostfields match to cover how frequently it exists. Use most_fields to match any field and combines the _score from each field.
             $mq2 = new Query\MultiMatch();
             $mq2->setQuery($filteredQuery);
-            $mq2->setFields($fields);
+            $mq2->setFields($unboostedFields);
             $mq2->setType("most_fields");
             if ($this->fuzziness) {
                 $mq2->setParam('fuzziness', (int) $this->fuzziness);
