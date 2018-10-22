@@ -2,6 +2,15 @@
 
 An extensible search implementation for Elastic Search. 
 
+## Installation
+
+`composer require nyeholt/silverstripe-extensible-elastic`
+
+NOTE: Until https://github.com/heyday/silverstripe-elastica/pull/10 is merged in, you will need to add the patch file at
+
+https://gist.github.com/nyeholt/e3f4b1745b9af2cc3265df0e548d2b7c
+
+
 
 ## Configuration
 
