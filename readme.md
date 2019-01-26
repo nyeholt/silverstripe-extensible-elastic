@@ -80,7 +80,21 @@ SilverStripe\CMS\Model\SiteTree:
     # for extra boosting options - Symbiote\ElasticSearch\DataDiscovery
 ```
 
+## Customising indexed data
 
+For full control over data that gets indexed, there are two methods you can define;
+
+`public function updateElasticMappings(ArrayObject $mappings)`
+
+Adjusts the elastic types used for fields, eg
+
+`$mappings['RouteNumber'] = ['type' => 'text'];`
+
+On the indexing side, 
+
+`public function updateElasticDoc(\Elastica\Document $document)`
+
+allows changing the raw document sent to be indexed. 
 
 ## Details
 
