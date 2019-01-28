@@ -142,7 +142,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
             $types = Config::inst()->get(ElasticaSearch::class, 'additional_search_types');
         }
         if (!isset($fields[$sortBy])) {
-            $sortBy = 'score';
+            $sortBy = '_score';
         }
 
         $offset = (int)isset($vars['start']) ? $vars['start'] : 0;
@@ -274,6 +274,14 @@ class ElasticaSearchEngine extends CustomSearchEngine
             $results->setTotalItems($resultSet->totalItems());
         }
 
+        if (!$resultSet->getResults()) {
+            if (isset($_GET['debug']) && Permission::check('ADMIN')) {
+                $o = $resultSet->getQuery()->toArray();
+                echo json_encode($o);
+            }
+            
+            throw new \Exception('Search failed');
+        }
         $time = $resultSet->getResults()->getTotalTime();
         $results = [
             'Results' => $results,
