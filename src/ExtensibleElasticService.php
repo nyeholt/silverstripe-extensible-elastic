@@ -35,11 +35,44 @@ class ExtensibleElasticService extends ElasticaService
      */
     public $logger;
 
+    /**
+     * Overrides the parent indexName property so that we can
+     * change the index based on the search / indexing context.
+     * 
+     * We need this because the parent class has indexName as a private var
+     */
+    protected $customIndexName;
 
-    public function __construct(Client $client, $index)
+    /**
+     * ElasticaService constructor.
+     * @param Client $client
+     * @param $indexName
+     * @param LoggerInterface|null $logger Increases the memory limit while indexing. A memory limit string, such as "64M".
+     * @param null $indexingMemory
+     * @param string $searchableExtensionClassName
+     */
+    public function __construct(
+        Client $client,
+        $indexName,
+        LoggerInterface $logger = null,
+        $indexingMemory = null,
+        $searchableExtensionClassName = Searchable::class
+    )
     {
-        parent::__construct($client, $index);
+        parent::__construct($client, $indexName, $logger, $indexingMemory, $searchableExtensionClassName);
+        $this->customIndexName = $indexName;
         $this->queryBuilders['default'] = ElasticaQueryBuilder::class;
+    }
+
+    /**
+     * Override as parent class uses a private var
+     */
+    public function getIndex() {
+        return $this->getClient()->getIndex($this->customIndexName);
+    }
+
+    public function setIndexName($name) {
+        $this->customIndexName = $name;
     }
 
     /**

@@ -130,6 +130,7 @@ class ElasticaSearchController extends Extension
     /**
      * 	Process and render search results
      *
+     * @deprecated Since 2018 or thereabouts. Doesn't work!
      * 	@return array
      */
     public function getSearchResults($data = null, $form = null)
