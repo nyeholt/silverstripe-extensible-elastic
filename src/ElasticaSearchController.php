@@ -11,6 +11,8 @@ use SilverStripe\ORM\ArrayList;
 use SilverStripe\View\ArrayData;
 
 use SilverStripe\Forms\DropdownField;
+use SilverStripe\Forms\CompositeField;
+use SilverStripe\Forms\FieldGroup;
 /**
  *
  *
@@ -54,6 +56,8 @@ class ElasticaSearchController extends Extension
             $request = $this->owner->getRequest();
             $aggregation  = $request->getVar('aggregation');
 
+            $aggregationGroup = FieldGroup::create('AggregationOptions');
+
             foreach ($existingSearch['Aggregations'] as $facetType) {
                 $currentLabel = null;
                 $filterField = null;
@@ -69,14 +73,14 @@ class ElasticaSearchController extends Extension
                     $fieldName = "aggregation[$filterField]";
                     $values = isset($aggregation[$filterField]) ? $aggregation[$filterField] : [];
                     if ($page->FacetStyle === 'Dropdown') {
-                        $form->Fields()->push(
+                        $aggregationGroup->push(
                             DropdownField::create("", $currentLabel, $options)
                                 ->addExtraClass('facet-dropdown')
                                 ->setEmptyString(' ')
                                 ->setValue($values)
                         );
                     } else if ($page->FacetStyle === 'Checkbox') {
-                        $form->Fields()->push(
+                        $aggregationGroup->push(
                             CheckboxSetField::create("aggregation[$filterField]", $currentLabel, $options)
                                 ->addExtraClass('facet-checkbox')
                                 ->setValue($values)
@@ -84,6 +88,8 @@ class ElasticaSearchController extends Extension
                     }
                 }
             }
+
+            $form->Fields()->push($aggregationGroup);
         }
     }
 
