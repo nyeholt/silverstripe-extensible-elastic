@@ -308,8 +308,8 @@ class ElasticaSearchEngine extends CustomSearchEngine
             unset($data['url']);
             unset($data['start']);
             unset($data['aggregation']);
-            $link = $data->Link('getForm');
-            foreach ($vars as $var => $value) {
+            $link = $page->Link('getForm');
+            foreach ($data as $var => $value) {
                 $link = HTTP::setGetVar($var, $value, $link);
             }
 
