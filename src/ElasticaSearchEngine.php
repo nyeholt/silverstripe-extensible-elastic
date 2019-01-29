@@ -104,7 +104,12 @@ class ElasticaSearchEngine extends CustomSearchEngine
         }
 
         $request = $form->getController()->getRequest();
-        $vars = $request->getVars();
+
+        foreach (['SortBy','SortDirection','SearchType','start','limit','UserFilter','aggregation'] as $reqVar) {
+            if (!isset($data[$reqVar])) {
+                $data[$reqVar] = $request->getVar($reqVar);
+            }
+        }
 
         $query = null;
         $builder = $this->searchService->getQueryBuilder($page->QueryType);
@@ -122,12 +127,12 @@ class ElasticaSearchEngine extends CustomSearchEngine
             $builder->setFuzziness($page->Fuzziness);
         }
 
-        $sortBy = isset($vars['SortBy']) ? $vars['SortBy'] : $page->SortBy;
-        $sortDir = isset($vars['SortDirection']) ? $vars['SortDirection'] : $page->SortDirection;
+        $sortBy = isset($data['SortBy']) ? $data['SortBy'] : $page->SortBy;
+        $sortDir = isset($data['SortDirection']) ? $data['SortDirection'] : $page->SortDirection;
         $types = $this->searchableTypes($page);
         // allow user to specify specific type
-        if (isset($vars['SearchType'])) {
-            $fixedType = $vars['SearchType'];
+        if (isset($data['SearchType'])) {
+            $fixedType = $data['SearchType'];
             if (in_array($fixedType, $types)) {
                 $types = array($fixedType);
             }
@@ -145,8 +150,8 @@ class ElasticaSearchEngine extends CustomSearchEngine
             $sortBy = '_score';
         }
 
-        $offset = (int)isset($vars['start']) ? $vars['start'] : 0;
-        $limit = (int)isset($vars['limit']) ? $vars['limit'] : ($page->ResultsPerPage ? $page->ResultsPerPage : 10);
+        $offset = (int)isset($data['start']) ? $data['start'] : 0;
+        $limit = (int)isset($data['limit']) ? $data['limit'] : ($page->ResultsPerPage ? $page->ResultsPerPage : 10);
         // Apply any hierarchy filters.
         if (count($types)) {
             $sortBy = $this->searchService->getSortFieldName($sortBy, $types);
@@ -249,11 +254,11 @@ class ElasticaSearchEngine extends CustomSearchEngine
             }
         }
 
-        if (isset($vars['UserFilter'])) {
+        if (isset($data['UserFilter'])) {
             $filters = $page->UserFilters->getValues();
             if (count($filters)) {
                 $queries = array_keys($filters);
-                foreach ($vars['UserFilter'] as $index => $junk) {
+                foreach ($data['UserFilter'] as $index => $junk) {
                     if (isset($queries[$index])) {
                         $fv = explode(':', $queries[$index]);
                         $builder->addFilter($fv[0], $fv[1]);
@@ -300,10 +305,10 @@ class ElasticaSearchEngine extends CustomSearchEngine
                 throw new \RuntimeException("Could not retrieve results from elastic");
             }
 
-            unset($vars['url']);
-            unset($vars['start']);
-            unset($vars['aggregation']);
-            $link = $page->Link('getForm');
+            unset($data['url']);
+            unset($data['start']);
+            unset($data['aggregation']);
+            $link = $data->Link('getForm');
             foreach ($vars as $var => $value) {
                 $link = HTTP::setGetVar($var, $value, $link);
             }
