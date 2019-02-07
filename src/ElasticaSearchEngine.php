@@ -267,7 +267,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
             }
         }
 
-        $page->extend('updateQueryBuilder', $builder, $page);
+        $page->invokeWithExtensions('updateQueryBuilder', $builder, $page);
         $resultSet = $this->searchService->query($builder, $offset, $limit);
         /* @var $resultSet \Heyday\Elastica\ResultList */
 
