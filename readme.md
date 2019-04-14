@@ -81,6 +81,29 @@ SilverStripe\CMS\Model\SiteTree:
 ```
 
 
+## API
+
+To define your own custom field structures in the elastic index, you need to 
+
+* define your field mappings for the 'rebuild' phase
+* add data for those fields during the indexing phase
+
+
+```
+public function updateElasticMappings($mappings = []) {
+    $mappings['Identifier'] = ['type' => 'keyword'];
+    $mappings['ContentType'] = ['type' => 'keyword'];
+}
+```
+
+```
+public function updateElasticDoc(Document $document)
+{
+    $document->set('Identifier', $this->Identifier);
+    $document->set('ContentType', $this->ContentType);
+}
+
+```
 
 ## Details
 
