@@ -138,9 +138,6 @@ class ElasticaQueryBuilder
         $a                      = array_merge($this->facets['fields'], $fields);
         $this->facets['fields'] = array_unique(array_merge($this->facets['fields'], $fields));
         $this->facetLimit       = $limit;
-        if ($limit) {
-            $this->facetLimit = $limit;
-        }
         return $this;
     }
 
@@ -407,6 +404,7 @@ class ElasticaQueryBuilder
             // The second string will be the display title.
             $aggregation = new \Elastica\Aggregation\Terms($facet);
             $aggregation->setField($facet);
+            $aggregation->setSize($this->facetLimit ? $this->facetLimit : 100);
             $query->addAggregation($aggregation);
         }
 
