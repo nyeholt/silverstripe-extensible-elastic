@@ -19,6 +19,7 @@ use SilverStripe\Control\Director;
 use Elastica\Query\BoolQuery;
 use Elastica\Query\Term;
 use SilverStripe\ORM\FieldType\DBVarchar;
+use SilverStripe\Control\HTTPRequest;
 
 /**
  * @author marcus
@@ -97,13 +98,20 @@ class ElasticaSearchEngine extends CustomSearchEngine
         return $listType;
     }
 
+    /**
+     * @param array $data Variables to be used for search params
+     * @param HttpRequest | Form $form
+     *              The form or request object that triggered the seach
+     * @param ArPage $page
+     *              The search page with configuration for the search
+     */
     public function getSearchResults($data = null, $form = null, $page = null)
     {
         if ($this->currentResults) {
             return $this->currentResults;
         }
 
-        $request = $form->getController()->getRequest();
+        $request = $form instanceof HTTPRequest ? $form : $form->getController()->getRequest();
 
         foreach (['SortBy','SortDirection','SearchType','start','limit','UserFilter','aggregation'] as $reqVar) {
             if (!isset($data[$reqVar])) {
