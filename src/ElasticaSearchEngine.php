@@ -345,7 +345,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
                 $results['Aggregations'] = $aggregations;
             }
         } catch (Exception $ex) {
-            \SS_Log::log($ex, SS_Log::WARN);
+            error_log($ex->getMessage());
             if (Director::isDev()) {
                 throw $ex;
             }

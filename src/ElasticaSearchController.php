@@ -172,7 +172,7 @@ class ElasticaSearchController extends Extension
                     $this->owner->ResultsPerPage, $request->getVar('start') ? $request->getVar('start') : 0
                 ) : ArrayList::create();
         } catch (Exception $ex) {
-            SS_Log::log($ex, SS_Log::WARN);
+            error_log($ex->getMessage());
             $message = 'Search failed';
             $query   = null;
             $results = ArrayList::create();
