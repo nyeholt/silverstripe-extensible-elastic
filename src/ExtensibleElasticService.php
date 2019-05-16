@@ -211,9 +211,9 @@ class ExtensibleElasticService extends ElasticaService
         } catch (HttpException $ex) {
             $this->connected = false;
             // TODO LOG THIS ERROR
-            \SS_Log::log($ex, \SS_Log::ERR);
+            error_log($ex->getMessage());
         } catch (\Elastica\Exception\BulkException $be) {
-            \SS_Log::log($be, \SS_Log::ERR);
+            error_log($be->getMessage());
             throw $be;
         }
         $this->buffered = false;
