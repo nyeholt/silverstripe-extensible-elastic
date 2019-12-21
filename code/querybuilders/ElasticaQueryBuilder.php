@@ -442,7 +442,9 @@ class ElasticaQueryBuilder  {
 
             // Determine the filters to be applied
             foreach ($currentFilters as $field => $filter) {
-                if (!is_object($filter)) {
+				if (strpos($field, "ClassNameH") !== false) {
+					$filter = new Query\QueryString($filter);
+				} else if (!is_object($filter)) {
                     $filter = new Query\Term([$field => $filter]);
                 }
                 $overallFilter->addMust($filter);
