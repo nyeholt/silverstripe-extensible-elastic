@@ -7,14 +7,18 @@ use Elastica\Query;
  */
 class ElasticaQueryBuilder  {
     public $title = 'Default Elastica';
-    
+
     public $version = 2;
-	
+
 	protected $userQuery = '';
 	protected $fields = array('Title', 'Content');
 	protected $and = array();
 	protected $params = array();
 	protected $filters = array();
+
+	protected $postFilters = array();
+
+	protected $fuzziness  = 0;
 
 	/**
 	 *	Allow "alpha only sort" fields to be wrapped in wildcard characters when queried against.
@@ -28,36 +32,36 @@ class ElasticaQueryBuilder  {
 	 * @var array
 	 */
 	protected $boost = array();
-	
+
 	/**
 	 * Field:value => boost amount
 	 *
 	 * @var array
 	 */
 	protected $boostFieldValues = array();
-	
+
 	protected $sort;
-	
+
 	/**
 	 *
 	 * @var array
 	 */
 	protected $facets = array('fields' => array(), 'queries' => array());
-	
+
 	/**
 	 * Per-field facet limits
 	 *
 	 * @var array
 	 */
 	protected $facetFieldLimits = array();
-	
+
 	/**
 	 * Number of facets to return
 	 *
 	 * @var int
 	 */
 	protected $facetLimit = 50;
-	
+
 	/**
 	 * Number of items with faces to be included
 	 *
@@ -69,26 +73,41 @@ class ElasticaQueryBuilder  {
 		$this->userQuery = $query;
 		return $this;
 	}
-	
+
 	public function queryFields($fields) {
 		$this->fields = $fields;
 		return $this;
 	}
-	
+
 	/**
 	 * Retrieve the current set of fields being queried
-	 * 
+	 *
 	 * @return array
 	 */
 	public function currentFields() {
 		return $this->fields;
 	}
-	
+
+	public function setFuzziness($f) {
+        $this->fuzziness = $f;
+        return $this;
+	}
+
+	/**
+     * Add a post-query filter
+     *
+     * Post filters are applied _after_ things like aggregations are
+     * calculated
+     */
+    public function addPostFilter($name, $value) {
+        $this->postFilters[$name] = $value;
+    }
+
 	public function sortBy($field, $direction) {
 		$this->sort = "$field $direction";
 		return $this;
 	}
-	
+
 	public function andWith($field, $value) {
 		$existing = array();
 		if (isset($this->and[$field])) {
@@ -109,7 +128,7 @@ class ElasticaQueryBuilder  {
 		$this->params = $params;
 		return $this;
 	}
-	
+
 	public function addFacetFields($fields, $limit = 0) {
 		$a = array_merge($this->facets['fields'], $fields);
 		$this->facets['fields'] = array_unique(array_merge($this->facets['fields'], $fields));
@@ -119,20 +138,20 @@ class ElasticaQueryBuilder  {
 		}
 		return $this;
 	}
-	
+
 	public function addFacetQueries($queries, $limit = 0) {
 		$this->facets['queries'] = array_unique(array_merge($this->facets['queries'], $queries));
 		if ($limit) {
 			$this->facetLimit = $limit;
 		}
-		
+
 		return $this;
 	}
-	
+
 	public function addFacetFieldLimit($field, $limit) {
 		$this->facetFieldLimits[$field] = $limit;
 	}
-	
+
 	public function getParams() {
 		if (count($this->filters)) {
 			$this->params['fq'] = array_values($this->filters);
@@ -145,32 +164,32 @@ class ElasticaQueryBuilder  {
 
 		return $this->params;
 	}
-	
+
 	/**
 	 * Return the base search term
-	 * 
+	 *
 	 * @return string
 	 */
 	public function getUserQuery() {
 		return $this->userQuery;
 	}
-	
+
 	protected function facetParams() {
 		if (isset($this->facets['fields']) && count($this->facets['fields'])) {
 			$this->params['facet'] = 'true';
-			
+
 			$this->params['facet.field'] = array_values($this->facets['fields']);
 		}
-		
+
 		if (isset($this->facets['queries']) && count($this->facets['queries'])) {
 			$this->params['facet'] = 'true';
 			$this->params['facet.query'] = $this->facets['queries'];
 		}
-		
+
 		if ($this->facetLimit) {
 			$this->params['facet.limit'] = $this->facetLimit;
 		}
-		
+
 		if (count($this->facetFieldLimits)) {
 			foreach ($this->facetFieldLimits as $field => $limit) {
 				$this->params['f.' . $field . '.facet.limit'] = $limit;
@@ -178,8 +197,8 @@ class ElasticaQueryBuilder  {
 		}
 
 		$this->params['facet.mincount'] = $this->facetCount ? $this->facetCount : 1;
-		
-		
+
+
 	}
 
 	public function parse($string) {
@@ -217,10 +236,11 @@ class ElasticaQueryBuilder  {
 	public function wildcard($string) {
 
 		// Appropriately handle the input string if it only consists of a single term, where wildcard characters should not be wrapped around quotations.
+		$wildcard = $this->fuzziness > 0 ? '~' : '*';
 
 		$single = (strpos($string, ' ') === false);
 		if($single && (strpos($string, '"') === false)) {
-			return "*{$string}*";
+			return "$wildcard{$string}$wildcard";
 		}
 		else if($single) {
 			return $string;
@@ -250,16 +270,16 @@ class ElasticaQueryBuilder  {
 					$terms[] = $term;
 				}
 				else {
-					$term = "*{$term}*";
+					$term = "$wildcard{$term}$wildcard";
 
 					// When dealing with custom grouping, make sure the search terms have been wrapped.
 
 					$term = str_replace(array(
-						'*(',
-						')*'
+						$wildcard . '(',
+						')' . $wildcard
 					), array(
-						'(*',
-						'*)'
+						'(' . $wildcard,
+						$wildcard . ')'
 					), $term);
 					$terms[] = $term;
 				}
@@ -267,11 +287,11 @@ class ElasticaQueryBuilder  {
 		}
 		return implode(' ', $terms);
 	}
-	
+
 	public function boost($boost) {
 		$this->boost = $boost;
 	}
-	
+
 	public function boostFieldValues($boost) {
 		$this->boostFieldValues = $boost;
 	}
@@ -347,9 +367,146 @@ class ElasticaQueryBuilder  {
 		}
 //        $arr = json_encode($query->toArray());
 		return $query;
-    }
-    
+	}
+
 	public function toQuery() {
+
+		if ($this->version < 2) {
+            return $this->toVersion1Query();
+		}
+
+		// Determine the field specific boosting to be applied.
+        $fields = array();
+        $unboostedFields = array();
+
+        foreach ($this->fields as $field) {
+            $unboostedFields[] = $field;
+            if (isset($this->boost[$field])) {
+                $field .= "^{$this->boost[$field]}";
+            }
+            $fields[] = $field;
+        }
+
+        $query = new Query\BoolQuery();
+
+		$chars = explode(' ', '+ - && || ! ( ) { } [ ] ^ " ~ * ? : \ /');
+
+		$userQuery = $this->getUserQuery();
+
+        $filteredQuery = str_replace($chars, ' ', $userQuery);
+
+        if (!$this->allowEmpty || strlen($filteredQuery)) {
+            // okay, let's add our various matching bits that are needed
+            $subquery = new Query\BoolQuery();
+
+            // Partial match on the entered term
+            $mq = new Query\MultiMatch();
+            $mq->setQuery($filteredQuery);
+            $mq->setFields($unboostedFields);
+            $mq->setType("phrase_prefix");
+            $subquery->addShould($mq);
+
+            // Mostfields match to cover how frequently it exists. Use most_fields to match any field and combines the _score from each field.
+            $mq2 = new Query\MultiMatch();
+            $mq2->setQuery($filteredQuery);
+            $mq2->setFields($unboostedFields);
+            $mq2->setType("most_fields");
+            if ($this->fuzziness) {
+                $mq2->setParam('fuzziness', (int) $this->fuzziness);
+            }
+            $subquery->addShould($mq2);
+
+            // and now one with a keyword analyzer to do exact matching of the input text
+            $mq3 = new Query\MultiMatch();
+            $mq3->setQuery($filteredQuery);
+            $mq3->setFields($fields);
+            $mq3->setType("most_fields");
+            $mq3->setAnalyzer('keyword');
+            $mq3->setParam('boost', '3');
+            // $mq3->
+            $subquery->addShould($mq3);
+
+            $query->addMust($subquery);
+        }
+
+		$include = (Versioned::current_stage() === 'Live') ? 'Live' : 'Stage';
+
+        $overallFilter = new Query\BoolQuery();
+        $overallFilter->addMust(new Query\QueryString("SS_Stage:{$include}"));
+
+
+        // Determine the filters to be applied, separating the class hierarchy restriction.
+
+        if (count($this->filters)) {
+            $currentFilters = $this->filters;
+
+            // Determine the filters to be applied
+            foreach ($currentFilters as $field => $filter) {
+                if (!is_object($filter)) {
+                    $filter = new Query\Term([$field => $filter]);
+                }
+                $overallFilter->addMust($filter);
+            }
+        }
+
+        // Determine the value specific boosting to be applied, wrapping around the boolean query.
+
+        foreach ($this->boostFieldValues as $field => $boost) {
+            // we use a constant score here because the expectation is that
+            // it's an explicit match, not that the match will be weighted before
+            // being boosted
+            $boostQ = new Query\ConstantScore(new Query\QueryString($field));
+            $boostQ->setBoost((float) $boost);
+            $query->addShould($boostQ);
+        }
+
+        $query->addFilter($overallFilter);
+
+        // Instantiate the query object using this boosting wrapper.
+        $query = new Query($query);
+
+        // add in any postquery filtering
+        if (count($this->postFilters) > 0) {
+            $postFilter = new Query\BoolQuery();
+            // Determine the filters to be applied
+            foreach ($this->postFilters as $field => $filter) {
+                if (!is_object($filter)) {
+                    $filter = new Query\Term([$field => $filter]);
+                }
+                $postFilter->addMust($filter);
+            }
+            $query->setPostFilter($postFilter);
+        }
+
+
+        if ($this->sort) {
+            list($sortField, $sortOrder) = explode(" ", $this->sort);
+            $sort = [
+                $sortField => [
+                    'order' => $sortOrder,
+//                        'unmapped_type' => 'long',
+                ]
+            ];
+
+            $query->setSort($sort);
+        }
+
+
+        // Determine the faceting/aggregation.
+
+        foreach ($this->facets['fields'] as $facet => $title) {
+
+            // The second string will be the display title.
+            $aggregation = new \Elastica\Aggregation\Terms($facet);
+            $aggregation->setField($facet);
+            $aggregation->setSize($this->facetLimit ? $this->facetLimit : 100);
+            $query->addAggregation($aggregation);
+        }
+
+        return $query;
+	}
+
+	public function toLegacyQuery() {
         // if needs be to support AWS functionality
         if ($this->version < 2) {
             return $this->toVersion1Query();
@@ -376,7 +533,7 @@ class ElasticaQueryBuilder  {
 
 		$include = (Versioned::current_stage() === 'Live') ? 'Live' : 'Stage';
 //		$query->addMustNot(new Query\QueryString("SS_Stage:{$exclude}"));
-        
+
         $inclusion = new Query\BoolQuery();
         $inclusion->addMust(new Query\QueryString("SS_Stage:{$include}"));
         $query->addFilter($inclusion);
@@ -438,12 +595,12 @@ class ElasticaQueryBuilder  {
 
 		return $query;
 	}
-	
+
 	/**
-	 * Add a filter query clause. 
-	 * 
+	 * Add a filter query clause.
+	 *
 	 * Filter queries simply restrict the result set without affecting the score of results
-	 * 
+	 *
 	 * @param string $query
 	 */
 	public function addFilter($query, $value = null) {
@@ -451,17 +608,17 @@ class ElasticaQueryBuilder  {
 			// okay, if we've been given a hack... we'll try and fix it all up again
             $query = "$query:$value";
         }
-        
+
         // hack to handle solr building oddities
         $query = str_replace('_ms', '', $query);
-        
+
 		$this->filters[$query] = $query;
 		return $this;
 	}
-	
+
 	/**
 	 * Remove a filter in place on this query
-	 * 
+	 *
 	 * @param string $query
 	 * @param mixed $value
 	 */
@@ -475,15 +632,15 @@ class ElasticaQueryBuilder  {
 
 	/**
 	 * Apply a geo field restriction around a particular point
-	 * 
-	 * @param string $point 
+	 *
+	 * @param string $point
 	 *					The point in "lat,lon" format
 	 * @param string $field
 	 * @param float $radius
 	 */
 	public function restrictNearPoint($point, $field, $radius) {
 		$this->addFilter("{!geofilt}");
-		
+
 		$this->params['sfield'] = $field;
 		$this->params['pt'] = $point;
 		$this->params['d'] = $radius;

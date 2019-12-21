@@ -11,7 +11,8 @@ if (class_exists('ExtensibleSearchPage')) {
     class ElasticaSearch extends DataExtension
     {
         private static $db = array(
-            'QueryType' => 'Varchar',
+			'QueryType' => 'Varchar',
+			'Fuzziness'      => 'Int',
             'SearchType' => 'MultiValueField', // types that a user can search within
             'SearchOnFields' => 'MultiValueField',
             'ExtraSearchFields' => 'MultiValueField',
@@ -46,8 +47,8 @@ if (class_exists('ExtensibleSearchPage')) {
             $source = array_combine($types, $types);
 
             $extraSearchTypes = Config::inst()->get('ElasticaSearch', 'additional_search_types');
-            ksort($source);
             $source = is_array($extraSearchTypes) ? array_merge($source, $extraSearchTypes) : $source;
+            ksort($source);
             $types  = MultiValueDropdownField::create('SearchType',
                     _t('ExtensibleSearchPage.SEARCH_ITEM_TYPE', 'Search items of type'), $source);
             $fields->addFieldToTab('Root.Main', $types, 'Content');
@@ -61,9 +62,11 @@ if (class_exists('ExtensibleSearchPage')) {
 
             $this->addSortFields($fields, $objFields);
             $this->addBoostFields($fields, $objFields);
-            $this->addFacetFields($fields, $objFields);
+			$this->addFacetFields($fields, $objFields);
 
-
+			$ff = NumericField::create('Fuzziness', _t('ExtensibleElasticaSearch.FUZZ', 'Term fuzziness'));
+			$ff->setRightTitle('0 means only the exact spelling will be searched, 2 means that up to 2 differences will be considered');
+			$fields->insertBefore('SortBy', $ff);
 
             $fields->removeByName('FacetMapping');
         }
@@ -280,6 +283,10 @@ if (class_exists('ExtensibleSearchPage')) {
             $builder->sortBy($sortBy, $sortDir);
             $selectedFields = $this->owner->SearchOnFields->getValues();
             $extraFields    = $this->owner->ExtraSearchFields->getValues();
+
+			if ($this->owner->Fuzziness) {
+				$builder->setFuzziness($this->owner->Fuzziness);
+			}
 
             // the following serves two purposes; filter out the searched on fields to only those that
             // are in the actually  searched on types, and to map them to relevant solr types
