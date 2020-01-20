@@ -10,6 +10,7 @@ use SilverStripe\Dev\BuildTask;
 use SilverStripe\Core\Config\Config;
 
 use Heyday\Elastica\ElasticaService;
+use SilverStripe\CMS\Model\SiteTree;
 
 /**
  *
@@ -66,14 +67,15 @@ class VersionedReindexTask extends BuildTask
             }
         };
 
-		$message('Defining the mappings (if not already)');
-		$this->service->define();
+        if ($request->getVar('rebuild') || !$this->service->getIndex()->exists()) {
+            $message('Defining the mappings (if not already)');
+            $this->service->define();
+        }
 
         if ($request->getVar('reindex')) {
             $message('Refreshing the index');
             try {
                 // doing this manually because the base module doesn't support versioned directly
-
 
                 foreach ($this->service->getIndexedClasses() as $class) {
                     Versioned::set_stage('Stage');
