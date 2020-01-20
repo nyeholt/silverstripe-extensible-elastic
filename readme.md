@@ -124,3 +124,22 @@ than all other fields for any match to contribute highly.
 
 The base Heyday Elastic module doesn't handle indexing of Versioned content directly; 
 ElasticaSearchable provides a few overrides that take into account versioned content. 
+
+**Can I get rid of stale results?**
+
+You can prune old results by creating the PruneStaleResultsJob ; this
+takes as parameters
+
+* The field:value filter to use; typically something like ClassName:MyDataClass. 
+  If you don't want a filter applied, pass the string 'null'
+* How old something should be until it's considered 'old' in strtotime format
+* How frequently to run the job in seconds, ie 86400 for every day
+* How many to delete in each batch, typically around 1000
+
+
+```
+ClassName:My\Data\Class
+-1 month
+86400
+1000
+``` 
