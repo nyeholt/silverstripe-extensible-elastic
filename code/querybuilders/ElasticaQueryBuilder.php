@@ -395,7 +395,7 @@ class ElasticaQueryBuilder  {
 
         $filteredQuery = str_replace($chars, ' ', $userQuery);
 
-        if (!$this->allowEmpty || strlen($filteredQuery)) {
+        if (strlen($filteredQuery)) {
             // okay, let's add our various matching bits that are needed
             $subquery = new Query\BoolQuery();
 
