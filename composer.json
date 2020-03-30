@@ -29,7 +29,7 @@
 	"extra": {
 		"installer-name": "extensible-elastic",
 		"branch-alias": {
-			"dev-master": "2.8.x-dev"
+			"dev-master": "2.9.x-dev"
 		}
 	}
 }

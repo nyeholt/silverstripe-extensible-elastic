@@ -2,6 +2,7 @@
 
 namespace Symbiote\ElasticSearch;
 
+use Elastica\Aggregation\TopHits;
 use Elastica\Query;
 use SilverStripe\Versioned\Versioned;
 
@@ -66,6 +67,11 @@ class ElasticaQueryBuilder
     protected $facetLimit = 50;
 
     /**
+     * Whether to expand facet results to documents
+     */
+    protected $expandFacetResults = 0;
+
+    /**
      * Number of items with faces to be included
      *
      * @var int
@@ -94,12 +100,14 @@ class ElasticaQueryBuilder
         return $this->fields;
     }
 
-    public function setFuzziness($f) {
+    public function setFuzziness($f)
+    {
         $this->fuzziness = $f;
         return $this;
     }
 
-    public function setAllowEmpty($v) {
+    public function setAllowEmpty($v)
+    {
         $this->allowEmpty = $v;
         return $this;
     }
@@ -154,6 +162,13 @@ class ElasticaQueryBuilder
     public function addFacetFieldLimit($field, $limit)
     {
         $this->facetFieldLimits[$field] = $limit;
+        return $this;
+    }
+
+    public function setExpandFacetResults($expand)
+    {
+        $this->expandFacetResults = $expand;
+        return $this;
     }
 
     public function getParams()
@@ -161,8 +176,6 @@ class ElasticaQueryBuilder
         if ($this->sort) {
             $this->params['sort'] = $this->sort;
         }
-
-        $this->facetParams();
 
         return $this->params;
     }
@@ -187,7 +200,7 @@ class ElasticaQueryBuilder
         $sep    = '';
         $lucene = '';
         foreach ($this->fields as $field) {
-            $lucene .= $sep.'('.$field.':';
+            $lucene .= $sep . '(' . $field . ':';
 
             // Wrap wildcard characters around the individual terms for any "alpha only sort" fields.
 
@@ -195,7 +208,7 @@ class ElasticaQueryBuilder
 
             $lucene .= ')';
             if (isset($this->boost[$field])) {
-                $lucene .= '^'.$this->boost[$field];
+                $lucene .= '^' . $this->boost[$field];
             }
             $sep = ' OR ';
         }
@@ -257,9 +270,9 @@ class ElasticaQueryBuilder
 
                     $term    = str_replace(array(
                         ')' . $wildcard
-                        ), array(
-                        $wildcard. ')'
-                        ), $term);
+                    ), array(
+                        $wildcard . ')'
+                    ), $term);
                     $terms[] = $term;
                 }
             }
@@ -382,13 +395,12 @@ class ElasticaQueryBuilder
             $query->setPostFilter($postFilter);
         }
 
-
+        $sort = null;
         if ($this->sort) {
             list($sortField, $sortOrder) = explode(" ", $this->sort);
             $sort = [
                 $sortField => [
                     'order' => $sortOrder,
-//                        'unmapped_type' => 'long',
                 ]
             ];
 
@@ -397,20 +409,35 @@ class ElasticaQueryBuilder
 
 
 
+
+        $expando = null;
+        if ($this->expandFacetResults) {
+            $expando = new TopHits('top_facet_docs');
+            if ($sort) {
+                $expando->setSort($sort);
+            }
+
+            $expando->setSource(['ID', 'ClassName']);
+            $expando->setSize($this->expandFacetResults);
+        }
+
         // Determine the faceting/aggregation.
-
         foreach ($this->facets['fields'] as $facet => $title) {
-
             // The second string will be the display title.
             $aggregation = new \Elastica\Aggregation\Terms($facet);
             $aggregation->setField($facet);
             $aggregation->setSize($this->facetLimit ? $this->facetLimit : 100);
+
+            if ($expando) {
+                $aggregation->addAggregation($expando);
+            }
+
             $query->addAggregation($aggregation);
         }
 
-//        $o = $query->toArray();
-//
-//        $p = json_encode($o);
+        //        $o = $query->toArray();
+        //
+        //        $p = json_encode($o);
 
         return $query;
     }
@@ -434,7 +461,8 @@ class ElasticaQueryBuilder
      * Post filters are applied _after_ things like aggregations are
      * calculated
      */
-    public function addPostFilter($name, $value) {
+    public function addPostFilter($name, $value)
+    {
         $this->postFilters[$name] = $value;
     }
 
@@ -464,7 +492,7 @@ class ElasticaQueryBuilder
      */
     public function restrictNearPoint($point, $field, $radius)
     {
-        $this->addFilter("{!geofilt}");
+        $this->addFilter("{!geofilt}", "{!geofilt}");
 
         $this->params['sfield'] = $field;
         $this->params['pt']     = $point;

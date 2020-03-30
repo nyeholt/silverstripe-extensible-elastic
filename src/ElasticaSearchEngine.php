@@ -18,6 +18,9 @@ use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Director;
 use Elastica\Query\BoolQuery;
 use Elastica\Query\Term;
+use Elastica\ResultSet;
+use Exception;
+use Heyday\Elastica\ResultList;
 use SilverStripe\ORM\FieldType\DBVarchar;
 use SilverStripe\Control\HTTPRequest;
 
@@ -38,6 +41,13 @@ class ElasticaSearchEngine extends CustomSearchEngine
      * @var ArrayList
      */
     protected $currentResults;
+
+    /**
+     * The raw result list from elastic
+     *
+     * @var ResultSet
+     */
+    protected $elasticResult;
 
     /**
      * URL param for current search string
@@ -113,7 +123,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
 
         $request = $form instanceof HTTPRequest ? $form : $form->getController()->getRequest();
 
-        foreach (['SortBy','SortDirection','SearchType','start','limit','UserFilter','aggregation'] as $reqVar) {
+        foreach (['SortBy', 'SortDirection', 'SearchType', 'start', 'limit', 'UserFilter', 'aggregation'] as $reqVar) {
             if (!isset($data[$reqVar])) {
                 $data[$reqVar] = $request->getVar($reqVar);
             }
@@ -158,8 +168,8 @@ class ElasticaSearchEngine extends CustomSearchEngine
             $sortBy = '_score';
         }
 
-        $offset = (int)isset($data['start']) ? $data['start'] : 0;
-        $limit = (int)isset($data['limit']) ? $data['limit'] : ($page->ResultsPerPage ? $page->ResultsPerPage : 10);
+        $offset = (int) isset($data['start']) ? $data['start'] : 0;
+        $limit = (int) isset($data['limit']) ? $data['limit'] : ($page->ResultsPerPage ? $page->ResultsPerPage : 10);
         // Apply any hierarchy filters.
         if (count($types)) {
             $sortBy = $this->searchService->getSortFieldName($sortBy, $types);
@@ -234,7 +244,11 @@ class ElasticaSearchEngine extends CustomSearchEngine
         // Add in any fields we want to facet by in the response set
         $fieldFacets = $page->facetFieldMapping();
         if (count($fieldFacets)) {
-            $builder->addFacetFields($fieldFacets);
+            $builder->addFacetFields($fieldFacets, $page->MaxFacetResults ? $page->MaxFacetResults : 20);
+        }
+
+        if ($page->ExpandedResultCount) {
+            $builder->setExpandFacetResults($page->ExpandedResultCount);
         }
 
         // and now filter by any applied in the request
@@ -292,7 +306,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
                 $o = $resultSet->getQuery()->toArray();
                 echo json_encode($o);
             }
-            
+
             throw new \Exception('Search failed');
         }
         $time = $resultSet->getResults()->getTotalTime();
@@ -307,9 +321,9 @@ class ElasticaSearchEngine extends CustomSearchEngine
         $aggregations = ArrayList::create();
 
         try {
-            $elasticResults = $resultSet->getResults();
+            $this->elasticResult = $resultSet->getResults();
 
-            if (!$elasticResults) {
+            if (!$this->elasticResult) {
                 throw new \RuntimeException("Could not retrieve results from elastic");
             }
 
@@ -321,7 +335,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
                 $link = HTTP::setGetVar($var, $value, $link);
             }
 
-            foreach ($elasticResults->getAggregations() as $type => $aggregation) {
+            foreach ($this->elasticResult->getAggregations() as $type => $aggregation) {
                 // The groupings for each aggregation.
                 $buckets = ArrayList::create();
                 if (isset($aggregation['buckets'])) {
@@ -351,7 +365,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
             }
         }
 
-
+        $this->resultList = $resultSet;
         $this->currentResults = $results;
 
         if (isset($_GET['debug']) && Permission::check('ADMIN')) {
@@ -370,5 +384,15 @@ class ElasticaSearchEngine extends CustomSearchEngine
     public function getCurrentResults()
     {
         return $this->currentResults;
+    }
+
+    /**
+     * Get the raw elastic result list
+     *
+     * @return ResultSet
+     */
+    public function getCurrentElasticResult()
+    {
+        return $this->elasticResult;
     }
 }

@@ -29,6 +29,7 @@ use Exception;
 
 use ArrayObject;
 use InvalidArgumentException;
+use SilverStripe\Forms\TextField;
 
 /**
  * @author marcus
@@ -49,6 +50,9 @@ class ElasticaSearch extends DataExtension
         'FacetMapping' => 'MultiValueField',
         'FacetQueries' => 'MultiValueField',
         'MinFacetCount' => 'Int',
+        'MaxFacetResults'   => 'Int', // number of items shown in facet results
+        'ExpandedResultCount' => 'Int',
+        'InitialExpandField'    => 'Varchar(64)',
         // filter fields (not used for relevance, just for restricting data set)
         'FilterFields' => 'MultiValueField',
         // filters that users can explicitly choose from
@@ -168,7 +172,7 @@ class ElasticaSearch extends DataExtension
         );
 
         $facetMappingFields = $objFields;
-        if ($this->owner->CustomFacetFields && ($cff                = $this->owner->CustomFacetFields->getValues())) {
+        if ($this->owner->CustomFacetFields && ($cff = $this->owner->CustomFacetFields->getValues())) {
             foreach ($cff as $facetField) {
                 $facetMappingFields[$facetField] = $facetField;
             }
@@ -188,12 +192,6 @@ class ElasticaSearch extends DataExtension
             'Content'
         );
 
-        $fields->addFieldToTab('Root.Main',
-            $mfc = NumericField::create('MinFacetCount',
-            _t('ExtensibleSearchPage.MIN_FACET_COUNT', 'Minimum facet count for inclusion in facet results'), 2),
-            'Content'
-        );
-        $mfc->setRightTitle('If set to 0, all facets will be returned regardless of applied filters');
 
         $fields->addFieldToTab(
             'Root.Main',
@@ -212,6 +210,25 @@ class ElasticaSearch extends DataExtension
 
         $opts = Config::inst()->get(self::class, 'facet_styles');
         $fields->insertAfter('CustomFacetFields', DropdownField::create('FacetStyle', _t('ExtensibleSearchPage.FACET_STYLE', 'Facet display'), $opts)->setEmptyString('Manual'));
+
+        $fields->addFieldToTab('Root.Main',
+            $mfc = NumericField::create('MaxFacetResults',
+            _t('ExtensibleSearchPage.MAX_FACET_COUNT', 'Maximum results displayed in facet list'), 20),
+            'Content'
+        );
+
+        $fields->addFieldToTab('Root.Main', $efc = NumericField::create('ExpandedResultCount', _t('ExtensibleSearchPage.EXPAND_COUNT', 'Number of expanded results to show'), '5'), 'Content');
+        $efc->setRightTitle("Number of facet hits to expand in result set. Used to display multiple result groups on the result page");
+
+        $fields->addFieldToTab('Root.Main', $tf = TextField::create('InitialExpandField', _t('ExtensibleSearchPage.INITIAL_EXPAND_FIELD', 'Initial facet to display results for')), 'Content');
+        $tf->setRightTitle('Set a field name to use for the initial expanded facet view. Requires templates to support this');
+
+        $fields->addFieldToTab('Root.Main',
+            $mfc = NumericField::create('MinFacetCount',
+            _t('ExtensibleSearchPage.MIN_FACET_COUNT', 'Minimum facet count for inclusion in facet results'), 2),
+            'Content'
+        );
+        $mfc->setRightTitle('If set to 0, all facets will be returned regardless of applied filters');
     }
 
     protected function addBoostFields($fields, $objFields)

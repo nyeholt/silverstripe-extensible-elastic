@@ -2,17 +2,21 @@
 
 namespace Symbiote\ElasticSearch;
 
+use ArrayObject;
+use Elastica\ResultSet;
 use SilverStripe\Core\Extension;
 use SilverStripe\Forms\Form;
 use SilverStripe\Control\HTTP;
+use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Core\Convert;
 use SilverStripe\Forms\CheckboxSetField;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\View\ArrayData;
 
 use SilverStripe\Forms\DropdownField;
-use SilverStripe\Forms\CompositeField;
 use SilverStripe\Forms\FieldGroup;
+use SilverStripe\ORM\FieldType\DBVarchar;
+
 /**
  *
  *
@@ -133,6 +137,75 @@ class ElasticaSearchController extends Extension
         return $aggregations;
     }
 
+    public function isSearchFiltered()
+    {
+        /** @var HTTPRequest */
+        $request = $this->owner->getRequest();
+
+        if ($request->requestVar('aggregation')) {
+            return true;
+        }
+    }
+
+    /**
+     * Returns a set of _aggregated_ results, ie those aggregated
+     * by a certain field
+     */
+    public function AggregatedResults($fieldName)
+    {
+        /** @var HTTPRequest */
+        $request = $this->owner->getRequest();
+
+        if ($request->requestVar('aggregation')) {
+            return;
+        }
+
+        /** @var ResultSet */
+        $existingSearch = singleton(ElasticaSearchEngine::class)->getCurrentElasticResult();
+
+        if (!$existingSearch) {
+            return;
+        }
+        $agg = $existingSearch->getAggregation($fieldName);
+
+        $overallList = [];
+
+        if ($agg && isset($agg['buckets'])) {
+            foreach ($agg['buckets'] as $bucket) {
+                if (!isset($bucket['key']) || !strlen($bucket['key'])) {
+                    continue;
+                }
+                if (
+                    !isset($bucket['top_facet_docs']['hits']['hits']) ||
+                    count($bucket['top_facet_docs']['hits']['hits']) === 0
+                ) {
+                    continue;
+                }
+                $title = $bucket['key'];
+
+                $resultList = new AggregateResultList($bucket['top_facet_docs']['hits']['hits']);
+
+                $vars = $request->getVars();
+                unset($vars['url']);
+                unset($vars['aggregation']);
+                $link = $this->owner->data()->Link('getForm');
+                $vars['aggregation'] = [$fieldName => $title];
+
+                foreach ($vars as $var => $value) {
+                    $link = HTTP::setGetVar($var, $value, $link);
+                }
+
+                $overallList[] = ArrayData::create([
+                    'Title' => $title,
+                    'Children' => $resultList->toArrayList(),
+                    'Link' => $link,
+                ]);
+            }
+        }
+
+        return ArrayList::create($overallList);
+    }
+
     /**
      * 	Process and render search results
      *
@@ -169,8 +242,9 @@ class ElasticaSearchController extends Extension
 
         try {
             $results = $query ? $query->getDataObjects(
-                    $this->owner->ResultsPerPage, $request->getVar('start') ? $request->getVar('start') : 0
-                ) : ArrayList::create();
+                $this->owner->ResultsPerPage,
+                $request->getVar('start') ? $request->getVar('start') : 0
+            ) : ArrayList::create();
         } catch (Exception $ex) {
             error_log($ex->getMessage());
             $message = 'Search failed';
