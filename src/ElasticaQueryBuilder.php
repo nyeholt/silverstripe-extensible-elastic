@@ -2,6 +2,7 @@
 
 namespace Symbiote\ElasticSearch;
 
+use Elastica\Aggregation\Max;
 use Elastica\Aggregation\TopHits;
 use Elastica\Query;
 use SilverStripe\Versioned\Versioned;
@@ -422,6 +423,7 @@ class ElasticaQueryBuilder
 
 
         $expando = null;
+        $expandoMaxScore = null;
         if ($this->expandFacetResults) {
             $expando = new TopHits('top_facet_docs');
             if ($sort) {
@@ -430,6 +432,9 @@ class ElasticaQueryBuilder
 
             $expando->setSource(['ID', 'ClassName']);
             $expando->setSize($this->expandFacetResults);
+
+            $expandoMaxScore = new Max('max_score');
+            $expandoMaxScore->setField('_score');
         }
 
         // Determine the faceting/aggregation.
@@ -440,7 +445,9 @@ class ElasticaQueryBuilder
             $aggregation->setSize($this->facetLimit ? $this->facetLimit : 100);
 
             if ($expando) {
+                $aggregation->setOrder('max_score', 'desc');
                 $aggregation->addAggregation($expando);
+                $aggregation->addAggregation($expandoMaxScore);
             }
 
             $query->addAggregation($aggregation);
