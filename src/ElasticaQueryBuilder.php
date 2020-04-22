@@ -33,6 +33,11 @@ class ElasticaQueryBuilder
     protected $enableQueryWildcard = true;
 
     /**
+     * How much to boost exact keyword matches on fields
+     */
+    protected $contentBoost = 3;
+
+    /**
      * an array of field => amount to boost
      * @var array
      */
@@ -103,6 +108,12 @@ class ElasticaQueryBuilder
     public function setFuzziness($f)
     {
         $this->fuzziness = $f;
+        return $this;
+    }
+
+    public function setContentBoost($boost)
+    {
+        $this->contentBoost = $boost;
         return $this;
     }
 
@@ -339,7 +350,7 @@ class ElasticaQueryBuilder
             $mq3->setFields($fields);
             $mq3->setType("most_fields");
             $mq3->setAnalyzer('keyword');
-            $mq3->setParam('boost', '3');
+            $mq3->setParam('boost', $this->contentBoost);
             // $mq3->
             $subquery->addShould($mq3);
 

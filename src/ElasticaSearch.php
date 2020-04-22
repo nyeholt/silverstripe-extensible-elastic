@@ -30,6 +30,7 @@ use Exception;
 use ArrayObject;
 use InvalidArgumentException;
 use SilverStripe\Forms\TextField;
+use SilverStripe\Forms\ToggleCompositeField;
 
 /**
  * @author marcus
@@ -44,6 +45,9 @@ class ElasticaSearch extends DataExtension
         'ExtraSearchFields' => 'MultiValueField',
         'BoostFields' => 'MultiValueField',
         'BoostMatchFields' => 'MultiValueField',
+
+        'ContentMatchBoost' => 'Int',
+
         // faceting fields
         'FacetFields' => 'MultiValueField',
         'CustomFacetFields' => 'MultiValueField',
@@ -142,118 +146,72 @@ class ElasticaSearch extends DataExtension
 
     protected function addFacetFields(FieldList $fields, $objFields)
     {
-        $fields->addFieldToTab(
-            'Root.Main',
-            $kv = new KeyValueField('FilterFields', _t('ExtensibleSearchPage.FILTER_FIELDS', 'Fields to filter by')),
-            'Content'
-        );
-        $kv->setRightTitle("FieldName in the left column, value in the right. This will be applied before the search is executed");
-
-        $fields->addFieldToTab(
-            'Root.Main',
-            $kv = KeyValueField::create('UserFilters',
-                _t('ExtensibleSearchPage.USER_FILTER_FIELDS', 'User selectable filters')), 'Content'
-        );
-        $kv->setRightTitle('Field match (FieldName:Value) on the left, label displayed on right. These are shown on the search form.');
-
-        $fields->addFieldToTab('Root.Main',
-            new HeaderField('FacetHeader', _t('ExtensibleSearchPage.FACET_HEADER', 'Facet Settings')), 'Content');
-
-        $fields->addFieldToTab(
-            'Root.Main',
-            new MultiValueDropdownField('FacetFields',
-            _t('ExtensibleSearchPage.FACET_FIELDS', 'Fields to create facets for'), $objFields), 'Content'
-        );
-
-        $fields->addFieldToTab(
-            'Root.Main',
-            new MultiValueTextField('CustomFacetFields',
-            _t('ExtensibleSearchPage.CUSTOM_FACET_FIELDS', 'Additional fields to create facets for')), 'Content'
-        );
-
         $facetMappingFields = $objFields;
         if ($this->owner->CustomFacetFields && ($cff = $this->owner->CustomFacetFields->getValues())) {
             foreach ($cff as $facetField) {
                 $facetMappingFields[$facetField] = $facetField;
             }
         }
-        $fields->addFieldToTab(
-            'Root.Main',
-            new KeyValueField('FacetMapping',
-            _t('ExtensibleSearchPage.FACET_MAPPING', 'Mapping of facet title to nice title'), $facetMappingFields),
-            'Content'
-        );
-
-        $fields->addFieldToTab(
-            'Root.Main',
-            KeyValueField::create('FacetQueries',
-                _t('ExtensibleSearchPage.FACET_QUERIES', 'Fields to create query facets for')
-            )->setRightTitle("Enter an elastic query, then the field name"),
-            'Content'
-        );
-
-
-        $fields->addFieldToTab(
-            'Root.Main',
-            $kv = KeyValueField::create('FacetFields',
-                _t('ExtensibleSearchPage.FACET_FIELDS', 'Fields to create facets for'), $objFields), 'Content'
-        );
-        $kv->setRightTitle('FieldName in left column, display label in the right');
-
-
-        $fields->addFieldToTab(
-            'Root.Main',
-            $kv = KeyValueField::create('CustomFacetFields',
-                _t('ExtensibleSearchPage.CUSTOM_FACET_FIELDS', 'Additional fields to create facets for')), 'Content'
-        );
-        $kv->setRightTitle('FieldName in left column, display label in the right');
 
         $opts = Config::inst()->get(self::class, 'facet_styles');
-        $fields->insertAfter('CustomFacetFields', DropdownField::create('FacetStyle', _t('ExtensibleSearchPage.FACET_STYLE', 'Facet display'), $opts)->setEmptyString('Manual'));
 
-        $fields->addFieldToTab('Root.Main',
-            $mfc = NumericField::create('MaxFacetResults',
-            _t('ExtensibleSearchPage.MAX_FACET_COUNT', 'Maximum results displayed in facet list'), 20),
-            'Content'
-        );
 
-        $fields->addFieldToTab('Root.Main', $efc = NumericField::create('ExpandedResultCount', _t('ExtensibleSearchPage.EXPAND_COUNT', 'Number of expanded results to show'), '5'), 'Content');
-        $efc->setRightTitle("Number of facet hits to expand in result set. Used to display multiple result groups on the result page");
-
-        $fields->addFieldToTab('Root.Main', $tf = TextField::create('InitialExpandField', _t('ExtensibleSearchPage.INITIAL_EXPAND_FIELD', 'Initial facet to display results for')), 'Content');
-        $tf->setRightTitle('Set a field name to use for the initial expanded facet view. Requires templates to support this');
-
-        $fields->addFieldToTab('Root.Main',
+        $filtering = ToggleCompositeField::create("FilterFieldsList", "Filtering and facets", [
+            $kva = new KeyValueField('FilterFields', _t('ExtensibleSearchPage.FILTER_FIELDS', 'Fields to filter by')),
+            $kvb = KeyValueField::create('UserFilters', _t('ExtensibleSearchPage.USER_FILTER_FIELDS', 'User selectable filters')),
+            new HeaderField('FacetHeader', _t('ExtensibleSearchPage.FACET_HEADER', 'Facet Settings')),
+            // new MultiValueDropdownField('FacetFields', _t('ExtensibleSearchPage.FACET_FIELDS', 'Fields to create facets for'), $objFields),
+            // new MultiValueTextField('CustomFacetFields', _t('ExtensibleSearchPage.CUSTOM_FACET_FIELDS', 'Additional fields to create facets for')),
+            new KeyValueField('FacetMapping', _t('ExtensibleSearchPage.FACET_MAPPING', 'Mapping of facet title to nice title'), $facetMappingFields),
+            KeyValueField::create('FacetQueries',
+                    _t('ExtensibleSearchPage.FACET_QUERIES', 'Fields to create query facets for')
+                )->setRightTitle("Enter an elastic query, then the field name"),
+            $kvc = KeyValueField::create('FacetFields',
+                _t('ExtensibleSearchPage.FACET_FIELDS', 'Fields to create facets for'), $objFields),
+            $kvd = KeyValueField::create('CustomFacetFields',
+                _t('ExtensibleSearchPage.CUSTOM_FACET_FIELDS', 'Additional fields to create facets for')),
+            DropdownField::create('FacetStyle', _t('ExtensibleSearchPage.FACET_STYLE', 'Facet display'), $opts)->setEmptyString('Manual'),
+            NumericField::create('MaxFacetResults',
+                _t('ExtensibleSearchPage.MAX_FACET_COUNT', 'Maximum results displayed in facet list'), 20),
+            $efc = NumericField::create('ExpandedResultCount', _t('ExtensibleSearchPage.EXPAND_COUNT', 'Number of expanded results to show'), '5'),
+            $tf = TextField::create('InitialExpandField', _t('ExtensibleSearchPage.INITIAL_EXPAND_FIELD', 'Initial facet to display results for')),
             $mfc = NumericField::create('MinFacetCount',
-            _t('ExtensibleSearchPage.MIN_FACET_COUNT', 'Minimum facet count for inclusion in facet results'), 2),
-            'Content'
-        );
+                _t('ExtensibleSearchPage.MIN_FACET_COUNT', 'Minimum facet count for inclusion in facet results'), 2),
+        ]);
+
+
+        $kva->setRightTitle("FieldName in the left column, value in the right. This will be applied before the search is executed");
+        $kvb->setRightTitle('Field match (FieldName:Value) on the left, label displayed on right. These are shown on the search form.');
+        $kvc->setRightTitle('FieldName in left column, display label in the right');
+        $kvd->setRightTitle('FieldName in left column, display label in the right');
+        $efc->setRightTitle("Number of facet hits to expand in result set. Used to display multiple result groups on the result page");
+        $tf->setRightTitle('Set a field name to use for the initial expanded facet view. Requires templates to support this');
         $mfc->setRightTitle('If set to 0, all facets will be returned regardless of applied filters');
+
+        $fields->addFieldToTab('Root.Main', $filtering, 'Content');
     }
 
     protected function addBoostFields($fields, $objFields)
     {
         $boostVals = array();
-        for ($i = 1; $i <= 10; $i++) {
+        for ($i = 1; $i <= 50; $i++) {
             $boostVals[$i] = $i;
         }
 
-        $fields->addFieldToTab(
-            'Root.Main',
-            new KeyValueField('BoostFields', _t('ExtensibleSearchPage.BOOST_FIELDS', 'Boost values'), $objFields,
-            $boostVals), 'Content'
-        );
+        $boostFields = ToggleCompositeField::create('BoostSettings', 'Boost settings', [
+            NumericField::create('ContentMatchBoost', 'Boost for exact content matching'),
+            new KeyValueField('BoostFields', _t('ExtensibleSearchPage.BOOST_FIELDS', 'Boost values'), $objFields,$boostVals),
+            $f = new KeyValueField('BoostMatchFields', _t('ExtensibleSearchPage.BOOST_MATCH_FIELDS', 'Boost fields with field/value matches'), array(), $boostVals)
+        ]);
+
+        $f->setRightTitle('Enter a field name, followed by the value to boost if found in the result set, eg "title:Home" ');
 
         $fields->addFieldToTab(
             'Root.Main',
-            $f = new KeyValueField('BoostMatchFields',
-            _t('ExtensibleSearchPage.BOOST_MATCH_FIELDS', 'Boost fields with field/value matches'), array(), $boostVals),
+            $boostFields,
             'Content'
         );
-        $f->setRightTitle('Enter a field name, followed by the value to boost if found in the result set, eg "title:Home" ');
     }
-
-
 
     public function updateQueryBuilder($builder, $page)
     {

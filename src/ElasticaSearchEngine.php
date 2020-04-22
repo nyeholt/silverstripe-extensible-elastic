@@ -233,6 +233,11 @@ class ElasticaSearchEngine extends CustomSearchEngine
                 $builder->boostFieldValues($boost);
             }
         }
+
+        if ($page->ContentMatchBoost) {
+            $builder->setContentBoost($page->ContentMatchBoost);
+        }
+
         if ($filters = $page->FilterFields->getValues()) {
             if (count($filters)) {
                 foreach ($filters as $filter => $val) {
