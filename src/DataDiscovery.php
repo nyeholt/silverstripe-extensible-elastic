@@ -32,6 +32,7 @@ class DataDiscovery extends Extension
     public function updateElasticMappings($mappings)
     {
         $mappings['BoostTerms'] = ['type' => 'text'];
+        $mappings['BoostedKeywords'] = ['type' => 'keyword'];
 
         $mappings['Categories'] = ['type' => 'keyword'];
         $mappings['Keywords'] = ['type' => 'text'];
@@ -46,6 +47,8 @@ class DataDiscovery extends Extension
     public function updateElasticDoc($document)
     {
         $document->set('BoostTerms', $this->owner->BoostTerms->getValues());
+        $document->set('BoostedKeywords', $this->owner->BoostTerms->getValues());
+
         // expects taxonomy terms here...
         if ($this->owner->hasMethod('Terms')) {
             $categories = $this->owner->Terms()->column('Name');
