@@ -20,9 +20,9 @@ use Elastica\Query\BoolQuery;
 use Elastica\Query\Term;
 use Elastica\ResultSet;
 use Exception;
-use Heyday\Elastica\ResultList;
 use SilverStripe\ORM\FieldType\DBVarchar;
 use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Core\Injector\Injector;
 
 /**
  * @author marcus
@@ -295,37 +295,45 @@ class ElasticaSearchEngine extends CustomSearchEngine
         }
 
         $page->invokeWithExtensions('updateQueryBuilder', $builder, $page);
+
+        /** @var \Heyday\Elastica\ResultList */
         $resultSet = $this->searchService->query($builder, $offset, $limit);
-        /* @var $resultSet \Heyday\Elastica\ResultList */
 
-        $results = PaginatedList::create($resultSet->toArrayList())->setLimitItems(false);
-        $results->setPageLength($limit);
-        $results->setPageStart($offset);
-
-        if (count($resultSet->toArray())) {
-            $results->setTotalItems($resultSet->totalItems());
-        }
-
-        if (!$resultSet->getResults()) {
-            if (isset($_GET['debug']) && Permission::check('ADMIN')) {
-                $o = $resultSet->getQuery()->toArray();
-                echo json_encode($o);
-            }
-
-            throw new \Exception('Search failed');
-        }
-        $time = $resultSet->getResults()->getTotalTime();
         $results = [
-            'Results' => $results,
-            'TimeTaken' => $time,
+            'Results' => ArrayList::create(),
+            'TimeTaken' => 0.0,
             'Query' => DBVarchar::create_field('Varchar', $query)
         ];
 
-        // determine if we need to stick aggregation output in place for facets in the result set
-        // The aggregations.
-        $aggregations = ArrayList::create();
-
         try {
+
+            $results = PaginatedList::create($resultSet->toArrayList())->setLimitItems(false);
+            $results->setPageLength($limit);
+            $results->setPageStart($offset);
+
+            if (count($resultSet->toArray())) {
+                $results->setTotalItems($resultSet->totalItems());
+            }
+
+            if (!$resultSet->getResults()) {
+                if (isset($_GET['debug']) && Permission::check('ADMIN')) {
+                    $o = $resultSet->getQuery()->toArray();
+                    echo json_encode($o);
+                }
+
+                throw new \Exception('Search failed');
+            }
+            $time = $resultSet->getResults()->getTotalTime();
+            $results = [
+                'Results' => $results,
+                'TimeTaken' => $time,
+                'Query' => DBVarchar::create_field('Varchar', $query)
+            ];
+
+            // determine if we need to stick aggregation output in place for facets in the result set
+            // The aggregations.
+            $aggregations = ArrayList::create();
+
             $this->elasticResult = $resultSet->getResults();
 
             if (!$this->elasticResult) {
@@ -364,7 +372,8 @@ class ElasticaSearchEngine extends CustomSearchEngine
                 $results['Aggregations'] = $aggregations;
             }
         } catch (Exception $ex) {
-            error_log($ex->getMessage());
+            Injector::inst()->get(LoggerInterface::class)->error($ex);
+
             if (Director::isDev()) {
                 throw $ex;
             }
