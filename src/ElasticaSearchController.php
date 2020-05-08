@@ -33,22 +33,27 @@ class ElasticaSearchController extends Extension
         }
         $filters = $page->UserFilters->getValues();
         if ($filters) {
-            $cbsf = CheckboxSetField::create('UserFilter', '', array_values($filters));
+            $filterFieldValues = [];
 
-            $filterFieldValues = array_keys(array_values($filters));  //To set UserFilter default value on Search page
-
-            if(isset($_GET['action_getSearchResults'])){
-                $filterFieldValues = array();
-                if (isset($_GET['UserFilter'])) {
-                    foreach (array_values($filters) as $k => $v) {
-                        if (in_array($k, (array) $_GET['UserFilter'])) {
-                            $filterFieldValues[] = $k;
-                        }
+            $defaults = $page->DefaultFilters->getValues() ?? [];
+            $filterOptions = array_keys($filters);
+            if (count($defaults)) {
+                foreach ($defaults as $field => $value) {
+                    $index = array_search($field . ':' . $value, $filterOptions);
+                    if ($index !== false) {
+                        $filterFieldValues[] = $index;
                     }
                 }
             }
-            $cbsf->setValue($filterFieldValues);
 
+            $cbsf = CheckboxSetField::create('UserFilter', '', array_values($filters));
+
+            // $filterFieldValues = array_keys(array_values($filters));  //To set UserFilter default value on Search page
+
+            if (isset($_GET['action_getSearchResults']) && isset($_GET['UserFilter'])) {
+                $filterFieldValues = $_GET['UserFilter'];
+            }
+            $cbsf->setValue($filterFieldValues);
             $form->Fields()->push($cbsf);
         }
 

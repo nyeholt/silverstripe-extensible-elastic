@@ -62,6 +62,8 @@ class ElasticaSearch extends DataExtension
         // filters that users can explicitly choose from
         'UserFilters' => 'MultiValueField',
 
+        'DefaultFilters' => 'MultiValueField',
+
         'FacetStyle' => 'Varchar',
     );
 
@@ -159,6 +161,7 @@ class ElasticaSearch extends DataExtension
         $filtering = ToggleCompositeField::create("FilterFieldsList", "Filtering and facets", [
             $kva = new KeyValueField('FilterFields', _t('ExtensibleSearchPage.FILTER_FIELDS', 'Fields to filter by')),
             $kvb = KeyValueField::create('UserFilters', _t('ExtensibleSearchPage.USER_FILTER_FIELDS', 'User selectable filters')),
+            $kvdf = KeyValueField::create('DefaultFilters', _t('ExtensibleSearchPage.DEFAULT_USER_FIELDS', 'Default filters')),
             new HeaderField('FacetHeader', _t('ExtensibleSearchPage.FACET_HEADER', 'Facet Settings')),
             // new MultiValueDropdownField('FacetFields', _t('ExtensibleSearchPage.FACET_FIELDS', 'Fields to create facets for'), $objFields),
             // new MultiValueTextField('CustomFacetFields', _t('ExtensibleSearchPage.CUSTOM_FACET_FIELDS', 'Additional fields to create facets for')),
@@ -183,6 +186,7 @@ class ElasticaSearch extends DataExtension
         $kva->setRightTitle("FieldName in the left column, value in the right. This will be applied before the search is executed");
         $kvb->setRightTitle('Field match (FieldName:Value) on the left, label displayed on right. These are shown on the search form.');
         $kvc->setRightTitle('FieldName in left column, display label in the right');
+        $kvdf->setRightTitle('Filter values selected by default - also applies to facet fields if applicable');
         $kvd->setRightTitle('FieldName in left column, display label in the right');
         $efc->setRightTitle("Number of facet hits to expand in result set. Used to display multiple result groups on the result page");
         $tf->setRightTitle('Set a field name to use for the initial expanded facet view. Requires templates to support this');

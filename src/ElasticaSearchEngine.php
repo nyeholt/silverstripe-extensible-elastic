@@ -121,6 +121,9 @@ class ElasticaSearchEngine extends CustomSearchEngine
             return $this->currentResults;
         }
 
+        // tracks whether to apply 'default' filter settings
+        $applyDefault = true;
+
         $request = $form instanceof HTTPRequest ? $form : $form->getController()->getRequest();
 
         foreach (['SortBy', 'SortDirection', 'SearchType', 'start', 'limit', 'UserFilter', 'aggregation'] as $reqVar) {
@@ -260,6 +263,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
         $aggregation = $request->getVar('aggregation');
         $filterMethod = $page->MinFacetCount > 0 ? 'addFilter' : 'addPostFilter';
         if ($aggregation && is_array($aggregation)) {
+            $applyDefault = false;
             foreach ($aggregation as $field => $value) {
                 if (!isset($fieldFacets[$field])) {
                     // someone's add a field that shouldn't be filtered on
@@ -282,6 +286,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
         }
 
         if (isset($data['UserFilter'])) {
+            $applyDefault = false;
             $filters = $page->UserFilters->getValues();
             if (count($filters)) {
                 $queries = array_keys($filters);
@@ -292,6 +297,14 @@ class ElasticaSearchEngine extends CustomSearchEngine
                     }
                 }
             }
+        }
+
+        if ($applyDefault) {
+            $defaultFilters = $page->DefaultFilters->getValues() ?? [];
+            // add as post filter in case there's facets for this field
+                foreach ($defaultFilters as $field => $value) {
+                    $builder->addFilter($field, $value);
+                }
         }
 
         $page->invokeWithExtensions('updateQueryBuilder', $builder, $page);
