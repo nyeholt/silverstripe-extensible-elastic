@@ -255,10 +255,6 @@ class ElasticaSearchEngine extends CustomSearchEngine
             $builder->addFacetFields($fieldFacets, $page->MaxFacetResults ? $page->MaxFacetResults : 20);
         }
 
-        if ($page->ExpandedResultCount) {
-            $builder->setExpandFacetResults($page->ExpandedResultCount);
-        }
-
         // and now filter by any applied in the request
         $aggregation = $request->getVar('aggregation');
         $filterMethod = $page->MinFacetCount > 0 ? 'addFilter' : 'addPostFilter';
@@ -300,11 +296,16 @@ class ElasticaSearchEngine extends CustomSearchEngine
         }
 
         if ($applyDefault) {
+            if ($page->InitialExpandField) {
+                // we only support a single field for now
+                $builder->setExpandFacetResults([$page->InitialExpandField => $page->ExpandedResultCount]);
+            }
+
             $defaultFilters = $page->DefaultFilters->getValues() ?? [];
             // add as post filter in case there's facets for this field
-                foreach ($defaultFilters as $field => $value) {
-                    $builder->addFilter($field, $value);
-                }
+            foreach ($defaultFilters as $field => $value) {
+                $builder->addFilter($field, $value);
+            }
         }
 
         $page->invokeWithExtensions('updateQueryBuilder', $builder, $page);

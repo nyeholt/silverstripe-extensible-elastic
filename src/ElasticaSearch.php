@@ -176,8 +176,8 @@ class ElasticaSearch extends DataExtension
             DropdownField::create('FacetStyle', _t('ExtensibleSearchPage.FACET_STYLE', 'Facet display'), $opts)->setEmptyString('Manual'),
             NumericField::create('MaxFacetResults',
                 _t('ExtensibleSearchPage.MAX_FACET_COUNT', 'Maximum results displayed in facet list'), 20),
-            $efc = NumericField::create('ExpandedResultCount', _t('ExtensibleSearchPage.EXPAND_COUNT', 'Number of expanded results to show'), '5'),
             $tf = TextField::create('InitialExpandField', _t('ExtensibleSearchPage.INITIAL_EXPAND_FIELD', 'Initial facet to display results for')),
+            $efc = NumericField::create('ExpandedResultCount', _t('ExtensibleSearchPage.EXPAND_COUNT', 'Number of expanded results to show'), '5'),
             $mfc = NumericField::create('MinFacetCount',
                 _t('ExtensibleSearchPage.MIN_FACET_COUNT', 'Minimum facet count for inclusion in facet results'), 2),
         ]);

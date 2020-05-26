@@ -74,8 +74,9 @@ class ElasticaQueryBuilder
 
     /**
      * Whether to expand facet results to documents
+     * An array of field name => number of expanded results to generate
      */
-    protected $expandFacetResults = 0;
+    protected $expandFacetResults = [];
 
     /**
      * Number of items with faces to be included
@@ -420,23 +421,6 @@ class ElasticaQueryBuilder
         }
 
 
-
-
-        $expando = null;
-        $expandoMaxScore = null;
-        if ($this->expandFacetResults) {
-            $expando = new TopHits('top_facet_docs');
-            if ($sort) {
-                $expando->setSort($sort);
-            }
-
-            $expando->setSource(['ID', 'ClassName']);
-            $expando->setSize($this->expandFacetResults);
-
-            $expandoMaxScore = new Max('max_score');
-            $expandoMaxScore->setField('_score');
-        }
-
         // Determine the faceting/aggregation.
         foreach ($this->facets['fields'] as $facet => $title) {
             // The second string will be the display title.
@@ -444,7 +428,18 @@ class ElasticaQueryBuilder
             $aggregation->setField($facet);
             $aggregation->setSize($this->facetLimit ? $this->facetLimit : 100);
 
-            if ($expando) {
+            if (isset($this->expandFacetResults[$facet])) {
+                $expando = new TopHits('top_facet_docs');
+                if ($sort) {
+                    $expando->setSort($sort);
+                }
+
+                $expando->setSource(['ID', 'ClassName']);
+                $expando->setSize($this->expandFacetResults[$facet]);
+
+                $expandoMaxScore = new Max('max_score');
+                $expandoMaxScore->setField('_score');
+
                 $aggregation->setOrder('max_score', 'desc');
                 $aggregation->addAggregation($expando);
                 $aggregation->addAggregation($expandoMaxScore);
