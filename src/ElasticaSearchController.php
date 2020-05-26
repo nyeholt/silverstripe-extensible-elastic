@@ -78,7 +78,7 @@ class ElasticaSearchController extends Extension
                         $currentLabel = $facetItem->type;
                         $filterField = $facetItem->field;
                     }
-                    $options[$facetItem->key] = $facetItem->key;
+                    $options[$facetItem->key] = $facetItem->key . ($page->ShowFacetCount ? ' (' . $facetItem->doc_count . ')' : '');
                 }
                 if (count($options)) {
                     $fieldName = "aggregation[$filterField]";

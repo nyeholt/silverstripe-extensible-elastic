@@ -65,6 +65,7 @@ class ElasticaSearch extends DataExtension
         'DefaultFilters' => 'MultiValueField',
 
         'FacetStyle' => 'Varchar',
+        'ShowFacetCount' => 'Boolean',
     );
 
     private static $facet_styles = [
@@ -174,6 +175,7 @@ class ElasticaSearch extends DataExtension
             $kvd = KeyValueField::create('CustomFacetFields',
                 _t('ExtensibleSearchPage.CUSTOM_FACET_FIELDS', 'Additional fields to create facets for')),
             DropdownField::create('FacetStyle', _t('ExtensibleSearchPage.FACET_STYLE', 'Facet display'), $opts)->setEmptyString('Manual'),
+            CheckboxField::create('ShowFacetCount', _t('ExtensibleSearchPage.SHOW_FACET_COUNT', 'Show facet count')),
             NumericField::create('MaxFacetResults',
                 _t('ExtensibleSearchPage.MAX_FACET_COUNT', 'Maximum results displayed in facet list'), 20),
             $tf = TextField::create('InitialExpandField', _t('ExtensibleSearchPage.INITIAL_EXPAND_FIELD', 'Initial facet to display results for')),
