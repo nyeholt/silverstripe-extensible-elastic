@@ -281,8 +281,8 @@ class ElasticaSearchEngine extends CustomSearchEngine
             }
         }
 
+        $filtersAdded = [];
         if (isset($data['UserFilter'])) {
-            $applyDefault = false;
             $filters = $page->UserFilters->getValues();
             if (count($filters)) {
                 $queries = array_keys($filters);
@@ -290,20 +290,22 @@ class ElasticaSearchEngine extends CustomSearchEngine
                     if (isset($queries[$index])) {
                         $fv = explode(':', $queries[$index]);
                         $builder->addFilter($fv[0], $fv[1]);
+                        $filtersAdded[$fv[0]] = $fv[1];
                     }
                 }
             }
         }
 
-        if ($applyDefault) {
-            if ($page->InitialExpandField) {
-                // we only support a single field for now
-                $builder->setExpandFacetResults([$page->InitialExpandField => $page->ExpandedResultCount]);
-            }
+        if ($page->InitialExpandField) {
+            // we only support a single field for now
+            $builder->setExpandFacetResults([$page->InitialExpandField => $page->ExpandedResultCount]);
+        }
 
-            $defaultFilters = $page->DefaultFilters->getValues() ?? [];
-            // add as post filter in case there's facets for this field
-            foreach ($defaultFilters as $field => $value) {
+        $defaultFilters = $page->DefaultFilters->getValues() ?? [];
+        // add as post filter in case there's facets for this field
+        foreach ($defaultFilters as $field => $value) {
+            // only add defaults that haven't been overriden
+            if (!isset($filtersAdded[$field])) {
                 $builder->addFilter($field, $value);
             }
         }
