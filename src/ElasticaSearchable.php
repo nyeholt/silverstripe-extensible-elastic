@@ -44,6 +44,15 @@ class ElasticaSearchable extends Searchable
         $this->reIndex('Live');
     }
 
+    public function onBeforeUnpublish()
+    {
+        // We need to remove the `live` index from the search. Because we're not
+        // going through the `reIndex` methods and the `getElasticaDocument` is
+        // called from `Heyday\Elastica::remove`, we need to set the `liveIndex`
+        // flage here.
+        $this->liveIndex = true;
+    }
+
     public function getElasticaFields() {
         $result = parent::getElasticaFields();
 
