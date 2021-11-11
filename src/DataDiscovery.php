@@ -46,6 +46,7 @@ class DataDiscovery extends Extension
 
     public function updateElasticDoc($document)
     {
+
         $document->set('BoostTerms', $this->owner->BoostTerms->getValues());
         $document->set('BoostedKeywords', $this->owner->BoostTerms->getValues());
 

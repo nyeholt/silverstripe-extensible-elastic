@@ -23,6 +23,7 @@ use Exception;
 use SilverStripe\ORM\FieldType\DBVarchar;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Core\Injector\Injector;
+use Symbiote\MultiValueField\ORM\FieldType\MultiValueField;
 
 /**
  * @author marcus
@@ -101,7 +102,12 @@ class ElasticaSearchEngine extends CustomSearchEngine
 
     public function searchableTypes($page, $default = null)
     {
-        $listType = $page->SearchType ? $page->SearchType->getValues() : [$default];
+        $searchTypes = $page->SearchType;
+        if (!is_array($searchTypes) && $searchTypes instanceof MultiValueField) {
+            $searchTypes = $searchTypes->getValues();
+        }
+
+        $listType = $searchTypes ?? [$default];
         if (count($listType) === 0) {
             $listType = $default ? array($default) : [];
         }
