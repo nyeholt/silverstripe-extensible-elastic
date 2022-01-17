@@ -127,9 +127,7 @@ class ElasticaSearchable extends Searchable
 
         // Construct our ID based on type and stage, as _type mappings are being removed
         // in Elastic 6, meaning we need a unique ID
-        $id = $this->owner->getElasticaType() . '_' . $this->owner->ID . '_' . $stage;
 
-        $document->setId($id);
         $this->owner->invokeWithExtensions('updateElasticDoc', $document);
 
 		return $document;
