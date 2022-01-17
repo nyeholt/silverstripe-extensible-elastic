@@ -333,7 +333,7 @@ class ElasticaQueryBuilder
             $mq = new Query\MultiMatch();
             $mq->setQuery($filteredQuery);
             $mq->setFields($unboostedFields);
-            $mq->setType("phrase_prefix");
+            $mq->setType("best_fields");
             $subquery->addShould($mq);
 
             // Mostfields match to cover how frequently it exists. Use most_fields to match any field and combines the _score from each field.
