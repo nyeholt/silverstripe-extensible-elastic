@@ -16,12 +16,12 @@
 	}],
 	"require": {
 		"silverstripe/cms": "~4.0",
-        	"nglasl/silverstripe-extensible-search": "~4.0",
-        	"heyday/silverstripe-elastica": "*",
+        "nglasl/silverstripe-extensible-search": "~4.0",
+        "heyday/silverstripe-elastica": "*",
 		"symbiote/silverstripe-multivaluefield": "*"
 	},
     	"autoload": {
-		"psr-4": { 
+		"psr-4": {
             		"Symbiote\\ElasticSearch\\": "src/",
             		"Elastica\\Transport\\": "src/transport"
         	}
@@ -29,7 +29,7 @@
 	"extra": {
 		"installer-name": "extensible-elastic",
 		"branch-alias": {
-			"dev-master": "2.11.x-dev"
+			"dev-master": "3.0.x-dev"
 		}
 	}
 }
