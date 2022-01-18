@@ -240,7 +240,11 @@ class ElasticaQueryBuilder
         if (!strlen($string)) {
             return $string;
         }
-        $wildcard = $this->fuzziness > 0 ? '~' : '*';
+
+        $wildcard = '*';
+        if ($this->fuzziness) {
+            $wildcard .= '~' . ($this->fuzziness + 1);
+        }
 
         // Appropriately handle the input string if it only consists of a single term, where wildcard characters should not be wrapped around quotations.
 
@@ -281,11 +285,7 @@ class ElasticaQueryBuilder
 
                     // When dealing with custom grouping, make sure the search terms have been wrapped.
 
-                    $term    = str_replace(array(
-                        ')' . $wildcard
-                    ), array(
-                        $wildcard . ')'
-                    ), $term);
+                    $term    = str_replace(array(')' . $wildcard), array($wildcard . ')'), $term);
                     $terms[] = $term;
                 }
             }
@@ -329,12 +329,13 @@ class ElasticaQueryBuilder
             // okay, let's add our various matching bits that are needed
             $subquery = new Query\BoolQuery();
 
-            // Partial match on the entered term
-            $mq = new Query\MultiMatch();
-            $mq->setQuery($filteredQuery);
-            $mq->setFields($unboostedFields);
-            $mq->setType("phrase_prefix");
-            $subquery->addShould($mq);
+            // Add in the generalised simple query that _must_ be detected
+            $userQuery = ($this->enableQueryWildcard) ? $this->wildcard($userQuery) : $userQuery;
+            $mq = new Query\SimpleQueryString($userQuery, $fields);
+            $mq->setDefaultOperator(Query\SimpleQueryString::OPERATOR_AND);
+            $mq->setParam('lenient', true);
+            $subquery->addMust($mq);
+
 
             // Mostfields match to cover how frequently it exists. Use most_fields to match any field and combines the _score from each field.
             $mq2 = new Query\MultiMatch();
@@ -346,14 +347,14 @@ class ElasticaQueryBuilder
             }
             $subquery->addShould($mq2);
 
-            // and now one with a keyword analyzer to do exact matching of the input text
+            // // and now one with a keyword analyzer to do exact matching of the input text for a slightly higher boost
             $mq3 = new Query\MultiMatch();
             $mq3->setQuery($filteredQuery);
             $mq3->setFields($fields);
             $mq3->setType("most_fields");
             $mq3->setAnalyzer('keyword');
             $mq3->setParam('boost', $this->contentBoost);
-            // $mq3->
+
             $subquery->addShould($mq3);
 
             $query->addMust($subquery);
@@ -448,9 +449,9 @@ class ElasticaQueryBuilder
             $query->addAggregation($aggregation);
         }
 
-        //        $o = $query->toArray();
-        //
-        //        $p = json_encode($o);
+        $query->setHighlight([
+            'fields' => ['Content' => ['type' => 'unified']],
+        ]);
 
         return $query;
     }

@@ -3,6 +3,7 @@
 namespace Symbiote\ElasticSearch;
 
 use Elastica\Client;
+use Elastica\Exception\Connection\HttpException;
 use Heyday\Elastica\ElasticaService;
 use Heyday\Elastica\ResultList;
 use SilverStripe\Core\Injector\Injector;
@@ -38,7 +39,7 @@ class ExtensibleElasticService extends ElasticaService
     /**
      * Overrides the parent indexName property so that we can
      * change the index based on the search / indexing context.
-     * 
+     *
      * We need this because the parent class has indexName as a private var
      */
     protected $customIndexName;
@@ -205,7 +206,7 @@ class ExtensibleElasticService extends ElasticaService
         $index = $this->getIndex();
         try {
             foreach ($this->buffer as $type => $documents) {
-                $index->getType($type)->addDocuments($documents);
+                $index->addDocuments($documents);
                 $index->refresh();
             }
         } catch (HttpException $ex) {
