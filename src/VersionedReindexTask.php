@@ -88,7 +88,8 @@ class VersionedReindexTask extends BuildTask
                             $record->reIndex('Stage');
                         }
 
-                        if (Extensible::has_extension($class, Versioned::class)) {
+                        $classInstance = singleton($class);
+                        if ($classInstance->hasExtension(Versioned::class)) {
                             Versioned::set_stage('Live');
                             $live = Versioned::get_by_stage($class, 'Live');
                             foreach ($live as $liveRecord) {

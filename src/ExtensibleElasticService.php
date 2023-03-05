@@ -88,7 +88,7 @@ class ExtensibleElasticService extends ElasticaService
         $classes = array();
         foreach (ClassInfo::subclassesFor('SilverStripe\ORM\DataObject') as $candidate) {
             $candidateInstance = singleton($candidate);
-            if (Extensible::has_extension($candidate, 'Heyday\\Elastica\\Searchable')) {
+            if ($candidateInstance->hasExtension('Heyday\\Elastica\\Searchable')) {
                 $classes[] = $candidate;
             }
         }

@@ -334,7 +334,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
             $results->setPageStart($offset);
 
             if (count($resultSet->toArray())) {
-                $results->setTotalItems($resultSet->totalItems());
+                $results->setTotalItems($resultSet->getTotalItems());
             }
 
             if (!$resultSet->getResults()) {
