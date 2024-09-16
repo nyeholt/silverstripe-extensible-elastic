@@ -88,8 +88,7 @@ class VersionedReindexTask extends BuildTask
                             $record->reIndex('Stage');
                         }
 
-                        $classInstance = singleton($class);
-                        if ($classInstance->hasExtension(Versioned::class)) {
+                        if (Extensible::has_extension($class, Versioned::class)) {
                             Versioned::set_stage('Live');
                             $live = Versioned::get_by_stage($class, 'Live');
                             foreach ($live as $liveRecord) {
@@ -101,6 +100,46 @@ class VersionedReindexTask extends BuildTask
                 }
             } catch (\Exception $ex) {
                 $message("Some failures detected when indexing " . $ex->getMessage());
+            }
+        }
+
+        if ($request->getVar('remove')) {
+            list($id, $type) = explode(',', $request->getVar('remove'));
+            if (!$id && !$type) {
+                $message('Missing ID and Type for deleting from the index');
+                return;
+            }
+
+            $qb    = new \Elastica\QueryBuilder();
+
+            $buildQuery = $qb->query();
+            $matchId = $buildQuery->match('ID', $id);
+            $matchType = $buildQuery->match('ClassNameHierarchy', $type);
+
+            $fullQuery = $buildQuery->bool()->addFilter($matchId)->addFilter($matchType);
+
+            $query = new \Elastica\Query();
+            $query->setQuery($fullQuery);
+
+            /** @var \Elastica\ResultSet */
+            $result = $this->service->search($query, null, false);
+
+            if ($result->count() > 0) {
+                $results = $result->getResults();
+
+                $docs = [];
+
+                foreach ($results as $result) {
+                    if ($result->getId()) {
+                        $message("Removing " . $result->getId());
+                        $docs[] = $result->getDocument();
+                    }
+                }
+
+                if ($request->getVar('confirm') && count($docs)) {
+                    $index = $this->service->getIndex();
+                    $index->deleteDocuments($docs);
+                }
             }
         }
 	}
