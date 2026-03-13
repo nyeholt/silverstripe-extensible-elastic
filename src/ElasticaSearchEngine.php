@@ -180,7 +180,7 @@ class ElasticaSearchEngine extends CustomSearchEngine
         $offset = (int) isset($data['start']) ? $data['start'] : 0;
         $limit = (int) isset($data['limit']) ? $data['limit'] : ($page->ResultsPerPage ? $page->ResultsPerPage : 10);
         // Apply any hierarchy filters.
-        if (count($types)) {
+        if (count($types ?? [])) {
             $sortBy = $this->searchService->getSortFieldName($sortBy, $types);
             $hierarchyTypes = array();
             $parents = $page->SearchTrees()->count() ? implode(
